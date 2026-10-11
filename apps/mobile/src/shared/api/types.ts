@@ -138,9 +138,13 @@ export type ApiAskView = {
   book: ApiBook | null;
 };
 
+/**
+ * 이번 달 사용량. 서버는 실제 모델 비용으로 세고 앱에는 비율만 준다 — 금액도
+ * 토큰도 독자에게는 뜻이 없다. `remaining`은 문장 길이에 따라 달라지는 어림값이다.
+ */
 export type ApiQuota = {
-  used: number;
-  limit: number;
+  /** 0~1, 마지막 질문이 넘치면 1을 조금 넘는다 */
+  ratio: number;
   remaining: number;
   resetsOn: string;
 };

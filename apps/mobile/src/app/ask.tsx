@@ -210,7 +210,7 @@ export default function AskScreen() {
         title="질문"
         trailing={
           <AppText style={[styles.quota, left === 0 ? styles.quotaOut : null]}>
-            이번 달 {left}번 남음
+            이번 달 약 {left}번 남음
           </AppText>
         }
       />

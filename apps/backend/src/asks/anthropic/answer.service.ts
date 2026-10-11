@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 import {
   claudeFor,
+  costOf,
   logUsage,
   ModelUnavailable,
   unavailable,
@@ -143,7 +144,7 @@ export class AnswerService {
     bookTitle: string;
     author: string;
     page?: number;
-  }): Promise<Answer> {
+  }): Promise<{ answer: Answer; cost: number }> {
     const { client, model } = this.claude;
     if (!client) throw new ModelUnavailable('AI가 설정되지 않았습니다.');
 
@@ -171,7 +172,10 @@ export class AnswerService {
       const parsed = response.parsed_output;
       if (!parsed) throw new ModelUnavailable('모델의 답을 읽지 못했습니다.');
 
-      return parsed;
+      return {
+        answer: parsed,
+        cost: costOf(model, response.usage, this.log),
+      };
     } catch (error) {
       throw unavailable(error, this.log);
     }

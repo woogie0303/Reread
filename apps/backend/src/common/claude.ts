@@ -22,7 +22,7 @@ export function claudeFor(
   config: ConfigService,
   modelKey: string,
   log: Logger,
-  fallback = 'claude-sonnet-5',
+  fallback = 'claude-haiku-4-5-20251001',
 ): Claude {
   const apiKey = config.get<string>('ANTHROPIC_API_KEY');
   if (!apiKey)
@@ -62,17 +62,48 @@ export function unavailable(error: unknown, log: Logger): ModelUnavailable {
   return new ModelUnavailable('지금은 답을 받지 못했어요.');
 }
 
+export type Usage = {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+};
+
 /** 캐시가 실제로 걸렸는지는 usage로만 알 수 있다 — 짧은 접두부는 조용히 캐시되지 않는다 */
-export function logUsage(
-  log: Logger,
-  what: string,
-  usage: {
-    input_tokens: number;
-    output_tokens: number;
-    cache_read_input_tokens?: number | null;
-  },
-): void {
+export function logUsage(log: Logger, what: string, usage: Usage): void {
   log.debug(
     `${what}: in=${usage.input_tokens} cached=${usage.cache_read_input_tokens ?? 0} out=${usage.output_tokens}`,
+  );
+}
+
+/**
+ * 백만 토큰당 달러. 질문은 Haiku로만 묻는다 — 독자의 이번 달 사용량이 이 값으로
+ * 매겨지므로, 모델을 바꾸거나 가격이 바뀌면 여기와 ADR-0003의 숫자를 함께 고친다.
+ */
+const PRICES: Record<
+  string,
+  { input: number; output: number; cacheWrite: number; cacheRead: number }
+> = {
+  'claude-haiku-4-5-20251001': {
+    input: 1,
+    output: 5,
+    cacheWrite: 1.25,
+    cacheRead: 0.1,
+  },
+};
+
+/** 한 번 부른 값(달러). 표에 없는 모델은 Haiku 값으로 매기고 로그에 남긴다. */
+export function costOf(model: string, usage: Usage, log: Logger): number {
+  let price = PRICES[model];
+  if (!price) {
+    log.warn(`${model}의 가격을 몰라 Haiku 값으로 매깁니다.`);
+    price = PRICES['claude-haiku-4-5-20251001'];
+  }
+  return (
+    (usage.input_tokens * price.input +
+      usage.output_tokens * price.output +
+      (usage.cache_creation_input_tokens ?? 0) * price.cacheWrite +
+      (usage.cache_read_input_tokens ?? 0) * price.cacheRead) /
+    1_000_000
   );
 }

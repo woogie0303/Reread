@@ -85,6 +85,14 @@ export class Ask {
    */
   @Prop()
   answeredBy?: string;
+
+  /**
+   * 이 질문에 든 모델 비용(달러). 묶음을 한 번 부른 값을 답을 받은 문장 수로 나눠
+   * 적는다 — 답을 못 받은 문장은 독자의 몫에서 빼지 않는다. 이번 달 사용량은 이 값의
+   * 합이다(`AsksService.quota`). 이 값이 생기기 전에 답한 질문에는 없다.
+   */
+  @Prop()
+  cost?: number;
 }
 
 export type AskDocument = HydratedDocument<Ask>;

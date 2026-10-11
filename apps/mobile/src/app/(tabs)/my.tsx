@@ -20,7 +20,7 @@ import {
 import { ReminderSettings } from '@/widgets/review-reminder/ui/reminder-settings';
 
 /**
- * 마이 — 이번 달 남은 질문과, 쌓인 것들.
+ * 마이 — 이번 달 사용량과, 쌓인 것들.
  *
  * 레벨은 없다. 한때 '내 레벨'을 맨 위에 두고 책을 끝낼 때마다 다시 물었는데,
  * 한국어 책과 영어 밖의 원서까지 담게 되면서 사람 하나에 레벨 하나가 맞지
@@ -41,6 +41,7 @@ export default function MyScreen() {
   const { data: week } = useReadingWeek();
   const again = items.filter((i) => i.met > 1).length;
   const left = quota?.remaining ?? 0;
+  const ratio = quota?.ratio ?? 0;
 
   /** 되돌릴 수 없는 일은 한 번 묻는다 — 다시 들어오려면 로그인부터다 */
   const confirmSignOut = () =>
@@ -92,20 +93,23 @@ export default function MyScreen() {
         contentContainerStyle={styles.content}
         style={styles.scroll}
       >
+        {/*
+          사용량은 늘 보인다 — 숨겼다가 다 썼을 때 처음 보이면 독자는 속았다고 느낀다.
+          금액이 아니라 비율로 보이고, 남은 횟수는 문장 길이에 따라 달라서 '약'을 붙인다.
+        */}
         <AltPanel style={styles.quotaPanel}>
           <View style={styles.quotaHead}>
-            <AppText style={styles.quotaLabel}>이번 달 질문</AppText>
-            <AppText style={styles.quotaValue}>
-              {quota?.used ?? 0} / {quota?.limit ?? 0}
-            </AppText>
+            <AppText style={styles.quotaLabel}>이번 달 사용량</AppText>
+            <AppText style={styles.quotaValue}>{percent(ratio)}%</AppText>
           </View>
           <ProgressBar
-            value={quota ? quota.used / Math.max(1, quota.limit) : 0}
+            value={ratio}
+            fill={ratio >= 0.8 ? color.status.cautionary : color.primary}
           />
           {left > 0 ? (
             <AppText
               style={styles.quotaHint}
-            >{`${left}번 남았어요. 다 써도 문장은 그대로 담겨요.`}</AppText>
+            >{`약 ${left}번 더 물어볼 수 있어요. 한 번에 여러 문장을 물으면 조금 더 쓰여요.`}</AppText>
           ) : (
             <View style={styles.quotaDone}>
               <Mark name="quota-done" size={40} />
@@ -175,6 +179,12 @@ export default function MyScreen() {
       </ScrollView>
     </View>
   );
+}
+
+/** 조금이라도 썼으면 0%로 보이지 않게, 넘쳤어도 100%를 넘기지 않게 */
+function percent(ratio: number): number {
+  if (ratio <= 0) return 0;
+  return Math.min(100, Math.max(1, Math.round(ratio * 100)));
 }
 
 function Row({ label, value }: { label: string; value: string }) {

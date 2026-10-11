@@ -33,7 +33,7 @@ export class LinkedAccount {
 export const LinkedAccountSchema = SchemaFactory.createForClass(LinkedAccount);
 
 /**
- * 광고를 보고 받은 질문 횟수. 달이 바뀌면 저절로 비워진다 — 남은 횟수를 되돌리는
+ * 광고를 보고 받은 사용량. 달이 바뀌면 저절로 비워진다 — 남은 몫을 되돌리는
  * 일 없이, 적힌 달이 이번 달이 아니면 0으로 읽는다(`AsksService.quota`와 같은 생각).
  */
 @Schema({ _id: false })
@@ -42,9 +42,12 @@ export class AskBonus {
   @Prop({ required: true })
   month!: string;
 
-  /** 이번 달에 광고로 받은 질문 수 */
+  /**
+   * 이번 달에 광고로 받은 사용량(달러). 예전에는 질문 수(`granted`)를 적었다 — 그 값은
+   * 단위가 달라 읽지 않는다.
+   */
   @Prop({ default: 0 })
-  granted!: number;
+  credit!: number;
 
   /** 오늘 날짜 `YYYY-MM-DD`와 오늘 본 광고 수 — 하루에 받을 수 있는 횟수를 막는다 */
   @Prop({ required: true })

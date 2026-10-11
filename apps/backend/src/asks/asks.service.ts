@@ -22,10 +22,16 @@ import {
 } from './dto/ask.dto';
 import { matchAnswer, type MatchedAnswer } from './match-answer';
 
-/** 이번 달에 몇 번 남았는지. 다 써도 담는 일은 실패하지 않는다. */
+/**
+ * 이번 달에 얼마나 썼는지. 다 써도 담는 일은 실패하지 않는다.
+ *
+ * 앱에는 비율만 보낸다 — 금액은 독자에게 뜻이 없고, 토큰은 더 그렇다. 몇 번 남았는지는
+ * 문장 길이에 따라 달라서 '약'으로만 말할 수 있는 어림값이다.
+ */
 export type AskQuota = {
-  used: number;
-  limit: number;
+  /** 이번 달 예산 중 쓴 비율. 마지막 질문이 예산을 넘길 수 있어서 1을 넘기도 한다. */
+  ratio: number;
+  /** 남은 예산으로 물을 수 있는 어림 횟수. 0이면 묻지 않고 담아 둔다. */
   remaining: number;
   /** 이 날 0시에 다시 찬다 */
   resetsOn: Date;
@@ -240,45 +246,72 @@ export class AsksService {
   }
 
   /**
-   * 이번 달 몫. 달이 바뀌면 저절로 찬다 — 어딘가에 남은 횟수를 적어두고
-   * 매달 0으로 되돌리는 대신, 이번 달에 답을 받은 질문을 세기만 한다.
+   * 이번 달 몫. 달이 바뀌면 저절로 찬다 — 어딘가에 남은 몫을 적어두고
+   * 매달 0으로 되돌리는 대신, 이번 달에 답을 받은 질문의 비용을 더하기만 한다.
    * 되돌리는 일이 없으면 되돌리다 실패할 일도 없다.
+   *
+   * 횟수가 아니라 비용으로 센다 — 한 쪽에서 다섯 문장을 묻는 것과 한 문장을 묻는
+   * 것은 비용이 몇 배 다르다(ADR-0003).
    */
   async quota(readerId: string): Promise<AskQuota> {
     const now = new Date();
     const reader = await this.readers.findById(readerId).select('askBonus');
     const bonus =
-      reader?.askBonus?.month === monthKey(now) ? reader.askBonus.granted : 0;
-    const limit = Number(this.config.get('ASK_MONTHLY_LIMIT') ?? 30) + bonus;
+      reader?.askBonus?.month === monthKey(now)
+        ? (reader.askBonus.credit ?? 0)
+        : 0;
+    const budget =
+      Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.2) + bonus;
+
     /**
-     * 묶음 하나가 한 번이다 — 한 쪽에서 다섯 문장을 물어도 한 번. 묶음이 생기기
-     * 전의 질문은 하나가 한 번이다.
+     * 묶음별로 모아 묶음 하나를 한 번으로 센다 — 남은 횟수의 어림값은 '한 번 물을 때
+     * 평균 얼마'로 내야 해서다. 비용이 적히기 전에 답한 질문은 0으로 센다.
      */
-    const answered = {
-      readerId: new Types.ObjectId(readerId),
-      status: 'answered' as const,
-      answeredAt: { $gte: startOfMonth(now) },
-    };
-    const batches = await this.asks.distinct('batchId', {
-      ...answered,
-      batchId: { $exists: true },
-    });
-    const single = await this.asks.countDocuments({
-      ...answered,
-      batchId: { $exists: false },
-    });
-    const used = batches.length + single;
+    const [spent] = await this.asks.aggregate<{
+      total: number;
+      batches: number;
+    }>([
+      {
+        $match: {
+          readerId: new Types.ObjectId(readerId),
+          status: 'answered',
+          answeredAt: { $gte: startOfMonth(now) },
+        },
+      },
+      {
+        $group: {
+          _id: { $ifNull: ['$batchId', '$_id'] },
+          cost: { $sum: { $ifNull: ['$cost', 0] } },
+        },
+      },
+      { $match: { cost: { $gt: 0 } } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$cost' },
+          batches: { $sum: 1 },
+        },
+      },
+    ]);
+    const total = spent?.total ?? 0;
+
+    /** 이 독자가 이번 달 몇 번 물었으면 그 평균으로, 아니면 처음 잰 평균으로 어림한다 */
+    const typical =
+      spent && spent.batches >= 3
+        ? total / spent.batches
+        : Number(this.config.get('ASK_TYPICAL_COST_USD') ?? 0.01);
+    const left = budget - total;
 
     return {
-      used,
-      limit,
-      remaining: Math.max(0, limit - used),
+      ratio: budget > 0 ? total / budget : 1,
+      /** 조금이라도 남아 있으면 한 번은 물을 수 있다 — 마지막 한 번은 넘쳐도 받는다 */
+      remaining: left > 0 ? Math.max(1, Math.floor(left / typical)) : 0,
       resetsOn: startOfNextMonth(now),
     };
   }
 
   /**
-   * 광고를 한 번 보고 질문을 더 받는다. **한도를 다 쓴 뒤에만** 연다 — 남아 있는데
+   * 광고를 한 번 보고 사용량을 더 받는다. **한도를 다 쓴 뒤에만** 연다 — 남아 있는데
    * 받게 두면 광고가 읽는 흐름 속으로 들어온다(ADR-0003). 하루에 받을 수 있는
    * 횟수도 막는다. 앱이 보고하는 것을 서버가 광고 네트워크에 되묻지는 않아서(SSV 없음),
    * 이 상한이 조작된 요청이 낼 수 있는 손해의 크기를 정한다.
@@ -287,8 +320,9 @@ export class AsksService {
     const now = new Date();
     const month = monthKey(now);
     const day = dayKey(now);
-    const perAd = Number(this.config.get('ASK_AD_BONUS') ?? 3);
-    const perDay = Number(this.config.get('ASK_AD_DAILY_LIMIT') ?? 5);
+    /** 광고 한 번 수익이 질문 한 번 비용과 비슷해서, 한 번 몫만 준다(ADR-0003) */
+    const perAd = Number(this.config.get('ASK_AD_BONUS_USD') ?? 0.01);
+    const perDay = Number(this.config.get('ASK_AD_DAILY_LIMIT') ?? 3);
 
     const before = await this.quota(readerId);
     if (before.remaining > 0) {
@@ -310,7 +344,7 @@ export class AsksService {
       {
         askBonus: {
           month,
-          granted: (sameMonth ? prev.granted : 0) + perAd,
+          credit: (sameMonth ? (prev.credit ?? 0) : 0) + perAd,
           day,
           dayCount: todayCount + 1,
         },
@@ -357,18 +391,23 @@ export class AsksService {
     }));
 
     let matched: (MatchedAnswer | null)[];
+    let cost: number;
     try {
-      const answer = await this.answer.answer({
+      const reply = await this.answer.answer({
         sentences: asked,
         bookTitle: book.title,
         author: book.author,
         page: entries[0].sentence.page,
       });
-      matched = matchAnswer(asked, answer);
+      matched = matchAnswer(asked, reply.answer);
+      cost = reply.cost;
     } catch (error) {
       if (!(error instanceof ModelUnavailable)) throw error;
       return this.wait(entries, '연결 실패');
     }
+    /** 답을 받은 문장끼리 나눠 진다 — 하나도 못 받았으면 독자의 몫에서 빼지 않는다 */
+    const answeredCount = matched.filter(Boolean).length;
+    const share = answeredCount ? cost / answeredCount : 0;
 
     /**
      * 하나씩 차례로 — 두 문장에서 같은 표현을 골랐으면 동시에 담다가
@@ -388,6 +427,7 @@ export class AsksService {
       ask.status = 'answered';
       ask.answeredAt = new Date();
       ask.answeredBy = this.answer.modelName;
+      ask.cost = share;
       ask.pendingReason = undefined;
       done.push(await ask.save());
     }
