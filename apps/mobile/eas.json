@@ -20,9 +20,23 @@
         "EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID": "ca-app-pub-5226607999291115/6798065336",
         "EXPO_PUBLIC_ADMOB_REWARDED_ID": "ca-app-pub-5226607999291115/2088664135"
       }
+    },
+    "testflight": {
+      "extends": "production",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_ADMOB_IOS_APP_ID": "ca-app-pub-3940256099942544~1458002511",
+        "EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID": "ca-app-pub-3940256099942544/4411468910",
+        "EXPO_PUBLIC_ADMOB_REWARDED_ID": "ca-app-pub-3940256099942544/1712485313"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": { "ascAppId": "6820106425" }
+    },
+    "testflight": {
+      "ios": { "ascAppId": "6820106425" }
+    }
   }
 }

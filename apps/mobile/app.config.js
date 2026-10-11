@@ -22,7 +22,7 @@ const path = require('node:path');
  *   - API 주소 없음 → 개발 서버 주소를 추측해 서버에 못 붙는다
  * EAS가 빌드 때 `EAS_BUILD_PROFILE`을 채워 주므로 개발 빌드와 로컬에서는 돌지 않는다.
  */
-if (process.env.EAS_BUILD_PROFILE === 'production') {
+if (['production', 'testflight'].includes(process.env.EAS_BUILD_PROFILE)) {
   const missing = [
     ['EXPO_PUBLIC_API_URL', '서버 주소 (eas.json의 production env)'],
     [
