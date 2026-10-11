@@ -131,7 +131,6 @@ export default function BookSearchScreen() {
               width={44}
               height={64}
               radius={6}
-              showTitle={false}
             />
             <View style={styles.rowText}>
               <AppText numberOfLines={1} style={styles.rowTitle}>

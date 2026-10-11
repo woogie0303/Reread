@@ -107,7 +107,6 @@ export function BookHero({
             width={130}
             height={200}
             radius={10}
-            showTitle={false}
           />
         </Tap>
       </View>

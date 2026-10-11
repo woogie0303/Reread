@@ -54,7 +54,6 @@ export function SentenceDetail({
             width={44}
             height={64}
             radius={6}
-            showTitle={false}
           />
         ) : null}
         <View style={styles.sourceText}>

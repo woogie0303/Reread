@@ -118,13 +118,6 @@ export const color = {
  */
 export const gutter = 20;
 
-/** 책등 그라디언트 — 라벨 없이 출처를 알려주는 색 */
-export const spineGradient = {
-  /** CSS의 linear-gradient(150deg, …)를 단위 사각형 좌표로 옮긴 값 */
-  start: { x: 0.25, y: 0.07 },
-  end: { x: 0.75, y: 0.93 },
-} as const;
-
 /** 그림자는 옅고 퍼짐이 적다. 종이 위라 색도 먹 쪽으로 따뜻하다. */
 export const shadow = {
   card: {

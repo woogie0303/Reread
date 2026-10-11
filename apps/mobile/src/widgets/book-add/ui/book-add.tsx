@@ -71,8 +71,6 @@ export function BookAdd({
           width={96}
           height={140}
           radius={12}
-          titleSize={13}
-          showAuthor
           style={shadow.cover}
         />
 
