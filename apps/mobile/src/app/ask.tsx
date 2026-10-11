@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAskQuota, useCreateAsk } from '@/entities/ask/api/ask.api';
 import { explainAskError } from '@/entities/ask/lib/explain-error';
+import { usagePercent } from '@/entities/ask/lib/quota';
 import { useBook, useCurrentBook } from '@/entities/book/api/book.api';
 import { useUpdateProgress } from '@/entities/reading/api/reading.api';
 import {
@@ -210,7 +211,7 @@ export default function AskScreen() {
         title="질문"
         trailing={
           <AppText style={[styles.quota, left === 0 ? styles.quotaOut : null]}>
-            이번 달 약 {left}번 남음
+            이번 달 {usagePercent(quota?.ratio)}% 사용
           </AppText>
         }
       />

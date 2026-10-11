@@ -3,6 +3,7 @@ import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAskQuota } from '@/entities/ask/api/ask.api';
+import { usagePercent } from '@/entities/ask/lib/quota';
 import { useItems } from '@/entities/lexical-item/api/item.api';
 import { useDeleteAccount, useReader } from '@/entities/reader/api/reader.api';
 import { useReadingWeek } from '@/entities/reading/api/reading.api';
@@ -42,6 +43,7 @@ export default function MyScreen() {
   const again = items.filter((i) => i.met > 1).length;
   const left = quota?.remaining ?? 0;
   const ratio = quota?.ratio ?? 0;
+  const used = usagePercent(ratio);
 
   /** 되돌릴 수 없는 일은 한 번 묻는다 — 다시 들어오려면 로그인부터다 */
   const confirmSignOut = () =>
@@ -95,21 +97,24 @@ export default function MyScreen() {
       >
         {/*
           사용량은 늘 보인다 — 숨겼다가 다 썼을 때 처음 보이면 독자는 속았다고 느낀다.
-          금액이 아니라 비율로 보이고, 남은 횟수는 문장 길이에 따라 달라서 '약'을 붙인다.
+          금액도 횟수도 아니라 쓴 비율로만 말한다(`usagePercent`). 0%에서 시작해 물을
+          때마다 그 질문이 실제로 쓴 만큼 오른다.
         */}
         <AltPanel style={styles.quotaPanel}>
           <View style={styles.quotaHead}>
             <AppText style={styles.quotaLabel}>이번 달 사용량</AppText>
-            <AppText style={styles.quotaValue}>{percent(ratio)}%</AppText>
+            <AppText style={styles.quotaValue}>{used}%</AppText>
           </View>
           <ProgressBar
             value={ratio}
             fill={ratio >= 0.8 ? color.status.cautionary : color.primary}
           />
           {left > 0 ? (
-            <AppText
-              style={styles.quotaHint}
-            >{`약 ${left}번 더 물어볼 수 있어요. 한 번에 여러 문장을 물으면 조금 더 쓰여요.`}</AppText>
+            <AppText style={styles.quotaHint}>
+              {used === 0
+                ? '물어볼 때마다 쓴 만큼 올라가요. 매달 1일에 0%로 돌아가요.'
+                : '한 번에 여러 문장을 물으면 조금 더 올라가요. 매달 1일에 0%로 돌아가요.'}
+            </AppText>
           ) : (
             <View style={styles.quotaDone}>
               <Mark name="quota-done" size={40} />
@@ -182,10 +187,6 @@ export default function MyScreen() {
 }
 
 /** 조금이라도 썼으면 0%로 보이지 않게, 넘쳤어도 100%를 넘기지 않게 */
-function percent(ratio: number): number {
-  if (ratio <= 0) return 0;
-  return Math.min(100, Math.max(1, Math.round(ratio * 100)));
-}
 
 function Row({ label, value }: { label: string; value: string }) {
   return (

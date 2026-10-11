@@ -10,6 +10,7 @@ import {
   useResolveAsk,
 } from '@/entities/ask/api/ask.api';
 import { explainAskError } from '@/entities/ask/lib/explain-error';
+import { usagePercent } from '@/entities/ask/lib/quota';
 import { toBook } from '@/entities/book/api/book.api';
 import { useDeleteSentence } from '@/entities/sentence/api/sentence.api';
 import { showRewarded } from '@/shared/ads/ads';
@@ -143,7 +144,7 @@ export default function PendingScreen() {
             {!pending.length
               ? '담아둔 문장은 모두 풀렸어요.'
               : left > 0
-                ? `이번 달 질문이 ${left}번 남았어요. 하나씩 풀어볼까요?`
+                ? `이번 달 사용량 ${usagePercent(quota?.ratio)}%. 하나씩 풀어볼까요?`
                 : '이번 달 질문을 다 쓰셨어요. 다음 달 1일에 자동으로 풀려요.'}
           </AppText>
         </AltPanel>
