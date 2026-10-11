@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSentenceFeed } from '@/entities/sentence/api/feed.api';
 import { color, gutter, type } from '@/shared/config';
-import { AppText, Icon, Tap } from '@/shared/ui';
+import { AppText, Icon, SearchField, Tap } from '@/shared/ui';
 import { DrawerList } from '@/widgets/drawer/ui/drawer-list';
 
 /**
@@ -33,17 +33,13 @@ export default function DrawerScreen() {
     <View style={styles.screen}>
       <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
         {searching ? (
-          <View style={styles.searchField}>
-            <Icon name="search" size={18} color={color.text.assistive} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              autoFocus
-              placeholder="문장이나 뜻으로 찾기"
-              placeholderTextColor={color.text.assistive}
-              style={styles.searchInput}
-            />
-          </View>
+          <SearchField
+            value={query}
+            onChangeText={setQuery}
+            autoFocus
+            placeholder="문장이나 뜻으로 찾기"
+            style={styles.searchField}
+          />
         ) : (
           <View style={styles.headText}>
             <AppText style={styles.title}>서랍</AppText>
@@ -120,17 +116,7 @@ const styles = StyleSheet.create({
   headText: { flex: 1, gap: 4 },
   title: { ...type.title3, color: color.text.primary },
   summary: { ...type.label2, color: color.text.meta },
-  searchField: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 40,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: color.surface.alt,
-  },
-  searchInput: { flex: 1, ...type.label1, color: color.text.primary },
+  searchField: { flex: 1 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: gutter, paddingBottom: 24, gap: 12 },
   waiting: {

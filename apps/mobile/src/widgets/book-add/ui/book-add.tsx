@@ -203,11 +203,17 @@ const styles = StyleSheet.create({
     color: color.text.secondary,
   },
   genreLabelOn: { color: color.text.onInk },
-  /** 줄 하나로 받는다 — 상자를 두르면 폼이 화면의 주인공이 된다 */
+  /**
+   * 줄 하나로 받는다 — 상자를 두르면 폼이 화면의 주인공이 된다.
+   * 줄 높이는 주지 않는다: iOS의 한 줄 입력칸은 `lineHeight`를 받으면 글자를 아래로
+   * 처지게 그린다(`SearchField`와 같은 이유). 높이는 위아래 여백으로 잡는다.
+   */
   input: {
-    ...type.body2,
+    fontSize: type.body2.fontSize,
+    fontWeight: type.body2.fontWeight,
+    letterSpacing: type.body2.letterSpacing,
     color: color.text.primary,
-    paddingVertical: 6,
+    paddingVertical: 9,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.border.default,
   },
