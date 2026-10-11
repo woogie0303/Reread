@@ -13,7 +13,7 @@ export type BookDraft = {
   currentPage: string;
   /** 검색에서 골랐을 때만 있다. 손으로 입력하는 화면에서는 고칠 자리가 없다. */
   cover?: string;
-  /** 구글 북스에서 왔으면 미리 골라져 있다. 그 밖엔 여기서 고른다. */
+  /** 검색은 장르를 주지 않으니 여기서 고른다. */
   genre?: Genre;
 };
 
@@ -31,8 +31,7 @@ export type BookDraft = {
  * 빈 채로 넘어오므로 여기서 채워야 한다.
  *
  * 장르도 없어도 되는 값이 아니다 — '장르별로 얼마나 읽었는지' 그래프가 이
- * 값에 기댄다. 구글 북스로 찾았으면 자동으로 골라져 있고(카카오·Open Library는
- * 장르를 안 주니 비어 온다), 그때도 다른 갈래로 바꿀 수 있다.
+ * 값에 기댄다. 카카오·Open Library는 장르를 안 주니 비어 오고, 여기서 고른다.
  */
 export function BookAdd({
   draft,

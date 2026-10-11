@@ -177,7 +177,7 @@ export type BookSearchResult = {
   pages?: number;
   cover?: string;
   publisher?: string;
-  /** 구글 북스에서만 자동으로 온다. 카카오·Open Library는 비워 온다. */
+  /** 검색은 장르를 주지 않아 늘 비어 온다. 등록 화면에서 고른다. */
   genre?: Genre;
 };
 

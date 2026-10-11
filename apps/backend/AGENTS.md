@@ -124,8 +124,7 @@ PATCH  /api/readers/me            닉네임 · 끝낸 권수
 DELETE /api/readers/me            계정 삭제 — 책·문장·표현·질문·읽은 기록·토큰 전부. 204, 몇 번 불러도 같다
 
 GET    /api/books/search ?q=       책 검색 — 한글은 카카오, 그 밖은 Open Library. :id보다 먼저 선언
-                                  구글 북스 결과에는 genre가 실려 온다(BISAC 분류를 접은 것). 카카오·
-                                  Open Library는 안 준다 — 없으면 등록 화면에서 독자가 고른다
+                                  검색 결과에는 genre가 없다 — 등록 화면에서 독자가 고른다
 GET    /api/books ?finished=      내 책장
 POST   /api/books                 genre는 `book.schema.ts`의 GENRES 중 하나만(없어도 된다)
 GET    /api/books/:id

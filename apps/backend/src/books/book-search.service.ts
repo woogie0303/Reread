@@ -4,7 +4,6 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Genre } from './book.schema';
 
 export type BookSearchResult = {
   title: string;
@@ -12,46 +11,7 @@ export type BookSearchResult = {
   pages?: number;
   cover?: string;
   publisher?: string;
-  /** 자동으로 알아낸 장르 — 구글 북스에서만 온다. 없으면 등록 화면에서 고른다. */
-  genre?: Genre;
 };
-
-/**
- * 구글 북스의 BISAC 계열 분류(`volumeInfo.categories`, 예: 'Fiction / Literary',
- * 'Juvenile Fiction / Fantasy & Magic')를 우리 장르 목록으로 접는다. 구글은 한
- * 책에 여러 줄을 주기도 하는데, 뒤로 갈수록 세분류라 **첫 줄의 첫 단어**이 가장
- * 굵은 갈래다.
- *
- * 표에 없는 분류는 매핑하지 않고 그대로 비워 등록 화면에서 고르게 한다 — 억지로
- * '기타'에 몰아넣으면 실제로 '기타'를 고른 책과 구분이 안 된다.
- */
-const CATEGORY_MAP: [RegExp, Genre][] = [
-  [/juvenile|young adult|children/i, '청소년·아동'],
-  [/science fiction|fantasy/i, '판타지·SF'],
-  [/mystery|thriller|suspense|crime/i, '미스터리·스릴러'],
-  [/romance/i, '로맨스'],
-  [/drama/i, '희곡'],
-  [/poetry/i, '시'],
-  [/literary collections|essays/i, '에세이'],
-  [/biography|autobiography/i, '전기·자서전'],
-  [/philosophy/i, '인문·철학'],
-  [/history/i, '역사'],
-  [/business|economics/i, '경제·경영'],
-  [/self-help/i, '자기계발'],
-  [/social science|psychology/i, '사회과학'],
-  [/science|nature|technology|medical/i, '과학'],
-  [/art|music|performing arts|photography/i, '예술'],
-  [/fiction/i, '소설'],
-];
-
-function genreFromGoogleCategories(categories?: string[]): Genre | undefined {
-  const first = categories?.[0];
-  if (!first) return undefined;
-  for (const [pattern, genre] of CATEGORY_MAP) {
-    if (pattern.test(first)) return genre;
-  }
-  return undefined;
-}
 
 /** 한 곳이 답하지 못했다 — 다음 곳으로 넘어갈 신호 */
 class SourceFailed extends Error {}
@@ -76,16 +36,14 @@ const CACHE_MAX = 500;
  *
  * 그래서 두 곳의 결과를 **섞지 않는다.** 섞으면 원서를 찾는 사람 앞에 번역판이 끼어든다.
  *
- * 앞의 곳이 막히면 다음 곳으로 넘어간다. `GOOGLE_BOOKS_API_KEY`가 있으면 한글이 아닌
- * 검색에서 구글을 먼저 부른다 — 키 없는 구글 요청은 쿼터를 같은 네트워크와 나눠 써서
- * 거의 늘 429라 부르지 않는다. 모두 막히면 빈 목록이 아니라 **오류**를 준다. 빈 목록은
+ * 앞의 곳이 막히면 다음 곳으로 넘어간다. 모두 막히면 빈 목록이 아니라 **오류**를 준다. 빈 목록은
  * 앱이 "찾는 책이 없어요"라고 말하게 해서, 막힌 것을 독자 탓으로 돌린다.
  *
  * Open Library는 **서버 전체에 초당 1건**(연락처를 밝히면 3건)이 한도다 — 사용자마다가
  * 아니다. 그래서 같은 검색어는 잠시 캐시하고, 앱은 입력이 멈춘 뒤에만 묻는다.
  *
  * Open Library는 **3자 미만을 거절한다**(422, "Query too short"). 비한글 1~2자는
- * (구글 키가 없으면) 부를 곳이 Open Library뿐이라 어차피 실패하므로, 아예 부르지
+ * 부를 곳이 Open Library뿐이라 어차피 실패하므로, 아예 부르지
  * 않고 빈 목록을 준다 — 이것도 "막힘"이 아니라 "아직 찾은 게 없음"이다.
  */
 @Injectable()
@@ -104,7 +62,7 @@ export class BookSearchService {
 
     /**
      * Open Library는 3자 미만을 422로 거절한다("Query too short"). 비한글
-     * 1~2자는 (구글 키가 없으면) Open Library가 유일한 곳이라 이 요청은
+     * 1~2자는 Open Library가 유일한 곳이라 이 요청은
      * 어차피 실패한다 — 막힌 걸로 보고하지 않고 조용히 빈 목록을 준다.
      * 카카오는 이런 하한이 없어서 한글은 이 줄에 걸리지 않는다.
      */
@@ -133,20 +91,16 @@ export class BookSearchService {
   /** 검색어 언어에 맞는 곳부터. 키가 없는 곳은 아예 넣지 않는다. */
   private sourcesFor(q: string): Source[] {
     const kakaoKey = this.config.get<string>('KAKAO_CLIENT_ID');
-    const googleKey = this.config.get<string>('GOOGLE_BOOKS_API_KEY');
 
     const kakao: Source | null = kakaoKey
       ? { name: '카카오 책 검색', run: () => this.kakao(q, kakaoKey) }
-      : null;
-    const google: Source | null = googleKey
-      ? { name: '구글 북스', run: () => this.google(q, googleKey) }
       : null;
     const openLibrary: Source = {
       name: 'Open Library',
       run: () => this.openLibrary(q),
     };
 
-    const order = HANGUL.test(q) ? [kakao, openLibrary] : [google, openLibrary];
+    const order = HANGUL.test(q) ? [kakao, openLibrary] : [openLibrary];
     return order.filter((source): source is Source => source !== null);
   }
 
@@ -172,16 +126,6 @@ export class BookSearchService {
       Authorization: `KakaoAK ${key}`,
     });
     return (body.documents ?? []).map(fromKakao).filter(isResult);
-  }
-
-  private async google(q: string, key: string): Promise<BookSearchResult[]> {
-    const url = new URL('https://www.googleapis.com/books/v1/volumes');
-    url.searchParams.set('q', q);
-    url.searchParams.set('maxResults', '20');
-    url.searchParams.set('key', key);
-
-    const body = await fetchJson<GoogleBooksResponse>(url, 'Google Books');
-    return (body.items ?? []).map(fromGoogle).filter(isResult);
   }
 
   private async openLibrary(q: string): Promise<BookSearchResult[]> {
@@ -286,35 +230,6 @@ function fromKakao(doc: KakaoDocument): BookSearchResult | null {
     author: doc.authors?.length ? doc.authors.join(', ') : '지은이 미상',
     cover: doc.thumbnail || undefined,
     publisher: doc.publisher || undefined,
-  };
-}
-
-type GoogleBooksResponse = { items?: GoogleVolume[] };
-type GoogleVolume = {
-  volumeInfo?: {
-    title?: string;
-    authors?: string[];
-    publisher?: string;
-    pageCount?: number;
-    imageLinks?: { thumbnail?: string; smallThumbnail?: string };
-    categories?: string[];
-  };
-};
-
-function fromGoogle(volume: GoogleVolume): BookSearchResult | null {
-  const info = volume.volumeInfo;
-  if (!info?.title) return null;
-
-  return {
-    title: info.title,
-    author: info.authors?.join(', ') ?? '지은이 미상',
-    pages: info.pageCount,
-    /** http로 오는 표지 주소를 https로 — 웹뷰가 아닌데도 섞여 온다 */
-    cover: (
-      info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail
-    )?.replace(/^http:/, 'https:'),
-    publisher: info.publisher,
-    genre: genreFromGoogleCategories(info.categories),
   };
 }
 
