@@ -2,11 +2,9 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
 /**
- * 장르 갈래. 구글 북스가 주는 BISAC 계열 분류(`Fiction / Literary` 등)를
- * `book-search.service.ts`가 이 갈래로 접어 넣는다 — 그래서 목록은 구글 북스
- * 상위 분류와 같은 결로 짠다. 카카오·Open Library는 장르를 안 주거나(카카오)
- * 정돈되지 않은 태그 뭉치라(Open Library) 자동으로 채우지 못하고, 그때는
- * 등록 화면에서 독자가 이 목록 중 하나를 고른다.
+ * 장르 갈래. 책 검색(카카오·Open Library)은 장르를 안 주거나(카카오) 정돈되지 않은
+ * 태그 뭉치라(Open Library) 자동으로 채우지 못한다 — 등록 화면에서 독자가 이 목록
+ * 중 하나를 고른다.
  */
 export const GENRES = [
   '소설',
