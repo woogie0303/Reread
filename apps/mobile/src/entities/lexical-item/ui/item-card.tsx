@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { color, type } from '@/shared/config';
 import { AppText, CountBadge, Quote, Tap } from '@/shared/ui';
@@ -17,21 +17,26 @@ import type { ItemSummary } from '../api/item.api';
 export function ItemCard({
   item,
   onPress,
+  style,
 }: {
   item: ItemSummary;
   onPress?: () => void;
+  /** 폭을 바꿀 때 — 격자에서는 칸을 채운다 */
+  style?: StyleProp<ViewStyle>;
 }) {
   const met = item.met;
 
   return (
     <Tap
-      style={styles.card}
+      style={[styles.card, style]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${item.term}, ${item.meaning}${met > 1 ? `, ${met}번 만남` : ''}`}
     >
       <View style={styles.head}>
-        <Quote style={styles.term}>{item.term}</Quote>
+        <Quote numberOfLines={2} style={styles.term}>
+          {item.term}
+        </Quote>
         {met > 1 ? <CountBadge label={`${met}번 만남`} /> : null}
       </View>
       <View style={styles.rule} />

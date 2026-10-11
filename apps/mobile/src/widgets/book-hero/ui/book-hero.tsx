@@ -11,6 +11,7 @@ import {
   ProgressBar,
   Quote,
   Tap,
+  emphasis,
 } from '@/shared/ui';
 
 /**
@@ -73,25 +74,7 @@ export function BookHero({
             길은 그 곁의 아이콘으로 물러난다 — 둘은 같은 무게가 아니다.
           */}
           {actionable ? (
-            <View style={styles.actions}>
-              <Tap
-                style={styles.capture}
-                onPress={onCapture}
-                accessibilityRole="button"
-                accessibilityLabel="읽던 쪽 찍기"
-              >
-                <CameraIcon size={18} color={color.text.onInk} />
-                <AppText style={styles.captureLabel}>읽던 쪽 찍기</AppText>
-              </Tap>
-              <Tap
-                style={styles.write}
-                onPress={onAsk}
-                accessibilityRole="button"
-                accessibilityLabel="문장 적어서 묻기"
-              >
-                <Icon name="write" size={17} color={color.primary} />
-              </Tap>
-            </View>
+            <BookActions onCapture={onCapture} onAsk={onAsk} />
           ) : null}
         </View>
 
@@ -129,9 +112,18 @@ export function BookHero({
         {progress ? (
           <>
             {measured ? <ProgressBar value={ratio} height={8} /> : null}
+            {/*
+              값이 라벨보다 먼저 읽힌다 — 이 줄에서 알고 싶은 것은 '얼마나 읽었나'이고,
+              쪽수는 그 근거다. 한동안 둘이 같은 크기·같은 옅은 색으로 붙어 있었다.
+            */}
             <AppText style={styles.progressLabel}>
+              {measured ? (
+                <AppText style={emphasis()}>
+                  {`${Math.round(ratio * 100)}%`}
+                </AppText>
+              ) : null}
               {measured
-                ? `p.${progress.currentPage} / ${progress.totalPages} · ${Math.round(ratio * 100)}%`
+                ? `  p.${progress.currentPage} / ${progress.totalPages}`
                 : `p.${progress.currentPage}`}
               {progress.lastReadLabel ? ` · ${progress.lastReadLabel}` : ''}
             </AppText>
@@ -141,6 +133,46 @@ export function BookHero({
             {book.pages ? `${book.pages}p` : ''}
           </AppText>
         )}
+      </Tap>
+    </View>
+  );
+}
+
+/**
+ * 이 앱이 하는 일 — 읽던 쪽을 찍어 막힌 문장을 묻는 것 — 과 그 곁의 손으로 적는 길.
+ *
+ * 홈에서는 머리 안에, 책 화면에서는 화면 아래 고정 바에 선다. 책 화면은 아래로
+ * 길어지는 화면이라, 주된 행동이 맨 위에 있으면 담은 표현을 훑어 내려간 뒤 다시
+ * 올라와야 찍을 수 있었다 — 엄지가 닿는 자리에 두면 어디까지 내려가 있든 바로 찍는다.
+ * `stretch`면 찍기 버튼이 남는 폭을 다 가져간다.
+ */
+export function BookActions({
+  onCapture,
+  onAsk,
+  stretch = false,
+}: {
+  onCapture?: () => void;
+  onAsk?: () => void;
+  stretch?: boolean;
+}) {
+  return (
+    <View style={[styles.actions, stretch ? styles.actionsStretch : null]}>
+      <Tap
+        style={[styles.capture, stretch ? styles.captureStretch : null]}
+        onPress={onCapture}
+        accessibilityRole="button"
+        accessibilityLabel="읽던 쪽 찍기"
+      >
+        <CameraIcon size={18} color={color.text.onInk} />
+        <AppText style={styles.captureLabel}>읽던 쪽 찍기</AppText>
+      </Tap>
+      <Tap
+        style={[styles.write, stretch ? styles.writeStretch : null]}
+        onPress={onAsk}
+        accessibilityRole="button"
+        accessibilityLabel="문장 적어서 묻기"
+      >
+        <Icon name="write" size={17} color={color.primary} />
       </Tap>
     </View>
   );
@@ -202,8 +234,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: color.primaryTint,
   },
+  actionsStretch: { alignSelf: 'stretch' },
+  captureStretch: { flex: 1, justifyContent: 'center', height: 52 },
+  writeStretch: { width: 52, height: 52 },
 
   /** 막대 위아래로 손가락이 닿을 자리를 준다 — 8pt 막대만으로는 누르기 어렵다 */
   progress: { gap: 8, paddingVertical: 4 },
-  progressLabel: { ...type.caption2, color: color.text.meta },
+  progressLabel: { ...type.label2, color: color.text.meta },
 });

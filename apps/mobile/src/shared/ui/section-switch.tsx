@@ -50,6 +50,7 @@ export function SectionSwitch<T extends string>({
             <Tap
               key={option.value}
               style={[styles.button, on ? styles.buttonOn : null]}
+              hitSlop={4}
               onPress={() => onChange(option.value)}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
@@ -57,7 +58,7 @@ export function SectionSwitch<T extends string>({
             >
               <Icon
                 name={option.icon}
-                size={16}
+                size={18}
                 color={on ? color.text.primary : color.text.assistive}
               />
             </Tap>
@@ -84,9 +85,10 @@ const styles = StyleSheet.create({
     backgroundColor: color.border.default,
   },
   switch: { flexDirection: 'row', gap: 4 },
+  /** 36에 hitSlop 4를 더해 엄지가 닿는 44가 된다 — 30이던 때는 옆 버튼을 자주 눌렀다 */
   button: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',

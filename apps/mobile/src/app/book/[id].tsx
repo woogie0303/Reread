@@ -7,6 +7,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   useBook,
@@ -28,12 +29,14 @@ import {
 import { useOpenScan } from '@/widgets/capture/lib/use-open-scan';
 import { BookDetail } from '@/widgets/book-detail/ui/book-detail';
 import type { BookTab } from '@/widgets/book-detail/ui/book-tabs';
+import { BookActions } from '@/widgets/book-hero/ui/book-hero';
 
 /** 책 한 권의 기록 — 홈이나 서랍의 출처 표시에서 들어온다. */
 export default function BookScreen() {
   /** tab — 방금 담은 곳을 펴서 보여줄 때 넘어온다(예: 촬영에서 '마음에 든 문장') */
   const { id, tab } = useLocalSearchParams<{ id: string; tab?: BookTab }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const openScan = useOpenScan();
   const { data: book, isPending } = useBook(id);
   const { data: reading } = useCurrentBook();
@@ -188,19 +191,28 @@ export default function BookScreen() {
                 params: { bookId: book.id },
               })
             }
-            /*
-              지금 읽는 책이 아니어도 찍고 물을 수 있어야 한다 — 두 권을 번갈아
-              읽기도 하고, 예전 책을 다시 펴기도 한다. 어느 책에 담을지는 bookId가 정한다.
-            */
-            onAsk={() =>
-              router.push({ pathname: '/ask', params: { bookId: book.id } })
-            }
-            onCapture={() => openScan(book.id)}
           />
         ) : (
           <AppText style={styles.missing}>그 책을 찾지 못했어요.</AppText>
         )}
       </ScrollView>
+
+      {/*
+        주된 행동은 엄지가 닿는 아래에 고정한다 — 담은 표현을 훑어 내려간 뒤에도 다시
+        올라가지 않고 찍는다. 지금 읽는 책이 아니어도 찍고 물을 수 있어야 한다 — 두 권을
+        번갈아 읽기도 하고, 예전 책을 다시 펴기도 한다. 어느 책에 담을지는 bookId가 정한다.
+      */}
+      {book ? (
+        <View style={[styles.bar, { paddingBottom: insets.bottom + 12 }]}>
+          <BookActions
+            stretch
+            onCapture={() => openScan(book.id)}
+            onAsk={() =>
+              router.push({ pathname: '/ask', params: { bookId: book.id } })
+            }
+          />
+        </View>
+      ) : null}
 
       {/* ⋮ — 책 추가와 같은 시트. 자주 쓰지 않는 일이라 머리에 아이콘 하나로 접어 둔다. */}
       <OptionSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
@@ -229,6 +241,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.surface.base },
   scroll: { flex: 1 },
   content: { paddingHorizontal: gutter, paddingBottom: 32 },
+  bar: {
+    paddingHorizontal: gutter,
+    paddingTop: 12,
+    backgroundColor: color.surface.base,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border.hairline,
+  },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   spinner: { paddingTop: 40 },
   missing: {

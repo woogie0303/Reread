@@ -21,7 +21,8 @@ import { BookTabs, type BookTab } from './book-tabs';
  *
  * 머리는 홈의 '읽고 있는 책'과 같은 판(`widgets/book-hero`)을 쓴다. 홈에서
  * 누르고 들어온 그 책이 여기서 다른 모양으로 서 있으면, 같은 책에 도착했다는
- * 느낌이 끊긴다.
+ * 느낌이 끊긴다. 다만 찍기·적기 버튼은 머리에 두지 않는다 — 책 화면은 아래로
+ * 길어져서, 화면이 화면 아래 고정 바(`BookActions`)로 세운다.
  */
 export function BookDetail({
   book,
@@ -30,8 +31,6 @@ export function BookDetail({
   onOpenItem,
   onOpenSentence,
   onPressProgress,
-  onAsk,
-  onCapture,
 }: {
   book: Book;
   /** 처음 펼 갈래 — 안 주면 담은 표현 */
@@ -40,8 +39,6 @@ export function BookDetail({
   onOpenItem?: (id: string) => void;
   onOpenSentence?: (id: string) => void;
   onPressProgress?: () => void;
-  onAsk?: () => void;
-  onCapture?: () => void;
 }) {
   const [tab, setTab] = useState<BookTab>(initialTab ?? 'items');
   const { data: items = [] } = useItems({ bookId: book.id });
@@ -59,8 +56,6 @@ export function BookDetail({
         progress={progress}
         inset={0}
         onPressProgress={onPressProgress}
-        onAsk={onAsk}
-        onCapture={onCapture}
       />
 
       {/*
@@ -84,7 +79,12 @@ export function BookDetail({
 
         {tab === 'items' ? (
           items.length ? (
-            <ItemShelf items={items} onPressItem={onOpenItem} title={null} />
+            <ItemShelf
+              items={items}
+              onPressItem={onOpenItem}
+              title={null}
+              layout="grid"
+            />
           ) : (
             <EmptyState
               mark="empty"
@@ -113,6 +113,6 @@ export function BookDetail({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 22 },
+  wrap: { gap: 24 },
   tabs: { gap: 16 },
 });
