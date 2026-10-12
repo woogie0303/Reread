@@ -6,7 +6,7 @@ import type { ItemSummary } from '@/entities/lexical-item/api/item.api';
 import { markSegments } from '@/entities/sentence/lib/segments';
 import type { SentenceCardData } from '@/entities/sentence/model/types';
 import { color, type } from '@/shared/config';
-import { AltPanel, AppText, Icon, Quote, Tap } from '@/shared/ui';
+import { AltPanel, AppText, CountBadge, Icon, Quote, Tap } from '@/shared/ui';
 
 /**
  * 문장 하나 — 서랍에서 줄을 누르면 온다.
@@ -15,8 +15,9 @@ import { AltPanel, AppText, Icon, Quote, Tap } from '@/shared/ui';
  *
  * - **뜻은 여전히 눌러야 열린다.** 상세 화면에 들어왔다고 한국어를 먼저 내밀면,
  *   눈은 아는 쪽(한국어)을 읽고 문장은 장식이 된다 — 이 앱이 거부하는 단어장이다.
- * - **재회는 여기 한가운데 선다.** 이 표현을 다른 책에서도 만났는지. 몇 번
- *   만났는지는 누르고 들어간 표현 화면이 말한다.
+ * - **재회는 여기 한가운데 선다.** 두 번 넘게 만난 표현에는 'N번 만남'이 붙는다.
+ *   한 문장에 표현이 여럿이면, 서랍의 '다시 만난 표현'에서 들어온 독자는 그중 어느
+ *   것이 다시 만난 것인지 알아야 한다 — 한동안 그 표시가 표현 화면에만 있었다.
  *
  * 물을 때 고른 표현은 답이 오는 순간 이미 담겨 있다 — 여기서 따로 담는 일은 없다.
  * 한때 모델이 짚어준 후보를 여기서 골라 담게 했는데, 고르지 않은 문장이 서랍
@@ -49,12 +50,7 @@ export function SentenceDetail({
       {/* 출처 — 어느 책 몇 쪽에서 담았는지 */}
       <View style={styles.source}>
         {row.book ? (
-          <BookCover
-            book={row.book}
-            width={44}
-            height={64}
-            radius={6}
-          />
+          <BookCover book={row.book} width={44} height={64} radius={6} />
         ) : null}
         <View style={styles.sourceText}>
           <AppText numberOfLines={2} style={styles.bookTitle}>
@@ -132,10 +128,15 @@ export function SentenceDetail({
                 style={styles.itemRow}
                 onPress={() => onOpenItem(item.id)}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.term}, 만난 문장 모두 보기`}
+                accessibilityLabel={`${item.term}${item.met > 1 ? `, ${item.met}번 만남` : ''}, 만난 문장 모두 보기`}
               >
                 <View style={styles.itemText}>
-                  <Quote style={styles.term}>{item.term}</Quote>
+                  <View style={styles.termRow}>
+                    <Quote style={styles.term}>{item.term}</Quote>
+                    {item.met > 1 ? (
+                      <CountBadge label={`${item.met}번 만남`} />
+                    ) : null}
+                  </View>
                   <AppText style={styles.meaning}>{item.meaning}</AppText>
                   {others.length ? (
                     <AppText numberOfLines={1} style={styles.others}>
@@ -145,7 +146,6 @@ export function SentenceDetail({
                     </AppText>
                   ) : null}
                 </View>
-                <Icon name="chevronRight" size={14} color={color.text.meta} />
               </Tap>
             );
           })}
@@ -206,7 +206,9 @@ const styles = StyleSheet.create({
     borderBottomColor: color.border.subtle,
   },
   itemText: { flex: 1, minWidth: 0, gap: 4 },
+  termRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   term: {
+    flexShrink: 1,
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '600',
