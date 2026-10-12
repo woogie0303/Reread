@@ -266,7 +266,7 @@ export class AsksService {
         ? (reader.askBonus.credit ?? 0)
         : 0;
     const budget =
-      Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.2) + bonus;
+      Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.03) + bonus;
 
     /**
      * 묶음별로 모아 묶음 하나를 한 번으로 센다 — 남은 횟수의 어림값은 '한 번 물을 때
@@ -304,7 +304,7 @@ export class AsksService {
     const typical =
       spent && spent.batches >= 3
         ? total / spent.batches
-        : Number(this.config.get('ASK_TYPICAL_COST_USD') ?? 0.01);
+        : Number(this.config.get('ASK_TYPICAL_COST_USD') ?? 0.0002);
     const left = budget - total;
 
     return {
@@ -325,8 +325,11 @@ export class AsksService {
     const now = new Date();
     const month = monthKey(now);
     const day = dayKey(now);
-    /** 광고 한 번 수익이 질문 한 번 비용과 비슷해서, 한 번 몫만 준다(ADR-0003) */
-    const perAd = Number(this.config.get('ASK_AD_BONUS_USD') ?? 0.01);
+    /**
+     * 광고 한 번(~₩15–30)이 질문 수십 번 비용을 넘지 않는 선에서 몫을 준다(ADR-0003).
+     * 기본값은 기본 모델(Gemma, 질문 한 번 ~$0.0002) 기준이다 — 모델을 바꾸면 이 숫자도 다시 잰다.
+     */
+    const perAd = Number(this.config.get('ASK_AD_BONUS_USD') ?? 0.004);
     const perDay = Number(this.config.get('ASK_AD_DAILY_LIMIT') ?? 3);
 
     const before = await this.quota(readerId);
