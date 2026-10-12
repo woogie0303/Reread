@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,12 +9,16 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Book, type BookDocument } from '../books/book.schema';
-import { ModelUnavailable } from '../common/claude';
 import { assertPageInBook } from '../common/page-in-book';
 import { ItemsService } from '../items/items.service';
 import { Reader } from '../readers/reader.schema';
 import { Sentence, type SentenceDocument } from '../sentences/sentence.schema';
-import { AnswerService, type AskedSentence } from './anthropic/answer.service';
+import {
+  ASK_MODEL,
+  ModelUnavailable,
+  type AskedSentence,
+  type AskModel,
+} from './model/ask-model';
 import { Ask, type AskDocument, type AskPick } from './ask.schema';
 import {
   MAX_PICKS,
@@ -46,7 +51,7 @@ export type AskView = {
 
 /**
  * 이만큼 지나도 답도 이유도 없는 질문은 묻는 도중에 끊긴 것이다. 모델은 45초에 포기하고
- * 다시 한 번 시도하므로(`common/claude.ts`) 정상이라면 100초 안에 '대기'든 '답'이든 정해진다.
+ * 다시 한 번 시도하므로(`model/anthropic.model.ts`) 정상이라면 100초 안에 '대기'든 '답'이든 정해진다.
  */
 export const INTERRUPTED_AFTER_MS = 3 * 60_000;
 
@@ -62,7 +67,7 @@ export class AsksService {
     @InjectModel(Sentence.name) private readonly sentences: Model<Sentence>,
     @InjectModel(Book.name) private readonly books: Model<Book>,
     @InjectModel(Reader.name) private readonly readers: Model<Reader>,
-    private readonly answer: AnswerService,
+    @Inject(ASK_MODEL) private readonly answer: AskModel,
     private readonly items: ItemsService,
     private readonly config: ConfigService,
   ) {}

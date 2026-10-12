@@ -25,7 +25,7 @@ src/
   books/      내 책과 진도
   sentences/  책에서 옮겨 적은 줄
   items/      어휘 항목과 만남 — 재회가 일어나는 곳
-  asks/       문장을 통째로 묻는 일 (anthropic/ 안에 모델 호출 하나)
+  asks/       문장을 통째로 묻는 일 (model/ 안에 모델 호출 — 공급자마다 파일 하나)
   retells/    챕터를 제 말로 옮겨 적어 남긴 것
   reading/    하루에 몇 쪽 읽었는지 — 진도가 앞으로 갈 때 저절로 쌓인다
 ```
@@ -83,7 +83,7 @@ src/
   기다리던 질문을 다시 물으면 같은 묶음에서 기다리던 것도 함께 묻는다.
 - **책의 언어를 따로 적지 않는다.** 외국어 문장이면 한국어로 옮기고, 한국어 문장이면
   쉬운 말로 풀어 쓰는데, 어느 쪽인지는 모델이 문장을 보고 정한다
-  (`asks/anthropic/answer.service.ts`). 독자 레벨도 두지 않는다 — 사람 하나에
+  (`asks/model/prompt.ts`). 독자 레벨도 두지 않는다 — 사람 하나에
   레벨 하나로는 여러 언어를 담을 수 없다.
 - **같은 글이 두 줄이 되게 두지 않는다**(ADR-0004). 담아둔 문장을 나중에 물을 때는
   `POST /api/asks`에 `sentenceId`를 보내 그 문장을 그대로 쓴다. 문장을 새로 만드는
@@ -100,6 +100,36 @@ src/
   읽고 나서 한 번 더 적게 만들면 아무도 적지 않는다.
 - **프롬프트의 붙박이 부분만 캐시에 올린다.** 책·문장처럼 요청마다 달라지는
   것은 system이 아니라 user 메시지에 싣는다 — 캐시는 앞에서 한 글자만 달라도 깨진다.
+
+## 질문 모델은 갈아 끼운다 (`asks/model/`)
+
+`AsksService`는 `AskModel` 인터페이스(`ask-model.ts`)만 안다. 어느 공급자의 어떤 모델이
+답하는지는 환경 변수가 정하고(`model.factory.ts`), 새 모델은 `AskModel`을 구현한 파일 하나를
+더하고 팩토리에 한 줄 등록하면 된다. 프롬프트와 응답 스키마(zod)는 모델과 무관한 공통이라
+`prompt.ts` 한 곳에 있다 — 모델마다 규칙이 갈리면 바꿔 끼워 비교할 수 없다.
+
+- **비용은 모델 파일이 자기 가격표로 매긴다**(`cost`). 월 할당량이 이 값을 더하기 때문에, 모델이
+  바뀌면 `ASK_MONTHLY_BUDGET_USD`·`ASK_TYPICAL_COST_USD`·`ASK_AD_BONUS_USD`도 다시 잰다(ADR-0003).
+- **구조화 출력을 모델이 강제하는지는 모델마다 다르다.** Anthropic은 SDK가 강제하지만
+  Cloudflare(Gemma)는 JSON 모드로 부탁할 뿐이라, 받은 뒤 zod로 직접 검증하고 어긋나면 한 번
+  다시 묻는다. 그래도 안 되면 `ModelUnavailable` — 질문은 대기로 남는다.
+- **Gemma는 생각 모드를 꺼야 한다**(`chat_template_kwargs.enable_thinking=false`). 켜 두면 17~38초
+  걸리고 보이지 않는 토큰이 과금된다. 새 모델을 가격표에 더할 때 이런 옵션이 있는지 먼저 한 번 불러
+  본다 — 문서가 응답 모양을 다 알려 주지 않는다.
+
+환경 변수:
+
+```
+ASK_PROVIDER=cloudflare            cloudflare(기본) | anthropic
+ASK_MODEL=                         비우면 공급자의 기본 모델(Gemma 4 26B / Haiku 4.5). 공급자를 바꾸면 비운다
+CLOUDFLARE_ACCOUNT_ID=             cloudflare일 때 — Workers AI 페이지의 Account ID
+CLOUDFLARE_API_TOKEN=              cloudflare일 때 — 'Workers AI' 토큰(Read + Edit)
+ANTHROPIC_API_KEY=                 anthropic일 때
+ASK_MONTHLY_BUDGET_USD=0.03        한 달에 쓸 수 있는 모델 비용(달러)
+ASK_TYPICAL_COST_USD=0.0002        아직 몇 번 안 물은 독자의 '약 N번' 어림에 쓰는 질문 1번 비용
+ASK_AD_BONUS_USD=0.004             광고 한 번이 주는 사용량
+ASK_AD_DAILY_LIMIT=3               하루에 받을 수 있는 광고 횟수
+```
 
 ## 길
 
@@ -183,14 +213,14 @@ DELETE /api/items/:id
 
 ## 오류와 제한 시간
 
-- **모델 호출은 한 번에 45초, 다시 시도는 한 번까지**(`common/claude.ts`). SDK 기본(10분, 두 번
+- **모델 호출은 한 번에 45초, 다시 시도는 한 번까지**(`asks/model/`). SDK 기본(10분, 두 번
   재시도)으로 두면 모델이 멈출 때 독자의 화면이 몇 분씩 돌았다. 넘으면 질문은 '연결 실패'로
   기다린다. 앱의 요청 제한(75초)보다 짧아야 앱이 먼저 포기하지 않는다.
 - **검증 메시지는 한국어다.** DTO에 한국어 `message`를 달고, 달지 않은 것은 `validationException`이
   일반 문장으로 바꾼다(원문은 로그에). 영어 기본 메시지가 앱에 그대로 보이지 않게 — 새 DTO를
   만들 때 `message`를 단다.
 - **서버에는 오류 수집 서비스가 없다.** 앱은 Measure를 쓰지만(`apps/mobile/AGENTS.md`) Measure는 모바일
-  전용이라 서버의 오류는 Render 로그로만 본다. 모델 오류는 `unavailable()`이 로그에 남긴다.
+  전용이라 서버의 오류는 Render 로그로만 본다. 모델 오류는 각 모델 파일의 `unavailable()`이 로그에 남긴다(토큰은 남기지 않는다).
 
 ## 아직 없는 것
 
