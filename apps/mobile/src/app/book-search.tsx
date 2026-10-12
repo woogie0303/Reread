@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +16,13 @@ import { spineFor } from '@/entities/book/lib/spine';
 import { BookCover } from '@/entities/book/ui/book-cover';
 import { color, gutter, type } from '@/shared/config';
 import { EmptyState } from '@/shared/ui/empty-state';
-import { ActionButton, AppText, Icon, ScreenHeader, Tap } from '@/shared/ui';
+import {
+  ActionButton,
+  AppText,
+  ScreenHeader,
+  SearchField,
+  Tap,
+} from '@/shared/ui';
 
 /**
  * 제목이나 지은이로 찾는다. 서버가 대신 불러오므로 앱에는 검색 키가 없다.
@@ -68,21 +73,18 @@ export default function BookSearchScreen() {
         title="책 검색하기"
       />
 
-      <View style={styles.field}>
-        <Icon name="search" size={17} color={color.text.assistive} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          autoFocus
-          placeholder="제목이나 지은이"
-          placeholderTextColor={color.text.assistive}
-          style={styles.input}
-          returnKeyType="search"
-        />
-        {busy && query.trim().length > 0 ? (
-          <ActivityIndicator size="small" color={color.text.assistive} />
-        ) : null}
-      </View>
+      <SearchField
+        value={query}
+        onChangeText={setQuery}
+        autoFocus
+        placeholder="제목이나 지은이"
+        style={styles.field}
+        trailing={
+          busy && query.trim().length > 0 ? (
+            <ActivityIndicator size="small" color={color.text.assistive} />
+          ) : null
+        }
+      />
 
       <FlatList
         data={results ?? []}
@@ -131,7 +133,6 @@ export default function BookSearchScreen() {
               width={44}
               height={64}
               radius={6}
-              showTitle={false}
             />
             <View style={styles.rowText}>
               <AppText numberOfLines={1} style={styles.rowTitle}>
@@ -151,18 +152,7 @@ export default function BookSearchScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.surface.base },
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: gutter,
-    marginBottom: 8,
-    paddingHorizontal: 14,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: color.surface.alt,
-  },
-  input: { flex: 1, ...type.label1, color: color.text.primary },
+  field: { marginHorizontal: gutter, marginBottom: 8 },
   list: { paddingHorizontal: gutter, paddingBottom: 24, gap: 4 },
   empty: { gap: 4 },
   row: {

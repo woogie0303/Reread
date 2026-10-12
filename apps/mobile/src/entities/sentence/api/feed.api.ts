@@ -73,3 +73,31 @@ export function useSentenceFeed() {
     loadMore: () => setLimit((n) => Math.min(MAX, n + PAGE)),
   };
 }
+
+/**
+ * 한 권의 문장 중 표현을 담은 것 — 책 화면의 '이 책에서 담은 표현' 갈래.
+ *
+ * 서랍과 **같은 줄**(`SentenceCard`)로 그리려고 같은 규칙(`buildFeed`)으로 밑줄을 긋는다.
+ * 한동안 책 화면만 표현 카드(표현 + 뜻)를 세웠는데, 같은 '담은 표현'이라는 이름 아래 서랍은
+ * 문장이, 책은 단어가 서 있었다 — 문장이 주인이라는 결정(ADR-0004)이 책 화면에만 닿지 않았다.
+ *
+ * 서랍의 피드를 거르지 않고 책 한 권을 따로 받는 이유: 피드는 모든 책을 합쳐 최근 몇십
+ * 줄만 받아서, 오래 읽은 책의 문장은 거기 없을 수 있다.
+ */
+export function useBookSentenceFeed(bookId: string) {
+  const sentences = useQuery({
+    queryKey: ['sentences', 'book', bookId],
+    queryFn: () =>
+      api<ApiSentence[]>(`/sentences?bookId=${bookId}&limit=${MAX}`),
+  });
+  const items = useItems({ bookId });
+
+  const rows = buildFeed({
+    asks: [],
+    liked: sentences.data ?? [],
+    books: [],
+    items: items.data ?? [],
+  }).filter((row) => row.claimed);
+
+  return { rows, isPending: sentences.isPending || items.isPending };
+}

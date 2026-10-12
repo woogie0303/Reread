@@ -20,17 +20,23 @@ import type { SentenceCardData } from '../model/types';
  * (`useSentenceFeed`가 따로 돌려준다).
  *
  * 출처는 표지로 보인다. 표지가 없는 책(직접 적은 책, 표지 없는 검색 결과)은
- * `BookCover`가 책등 색과 제목으로 대신 그린다.
+ * `BookCover`가 책 읽는 캐릭터로 채운다. 책 화면 안에서는(`inBook`) 출처를 적지 않는다.
  */
 export function SentenceCard({
   data,
   onOpen,
   showMet,
+  inBook = false,
 }: {
   data: SentenceCardData;
   onOpen?: (sentenceId: string) => void;
   /** 'N번 만남'을 적을지 — 서랍에서는 '다시 만난 표현' 갈래에서만 뜻이 있다 */
   showMet?: boolean;
+  /**
+   * 책 화면 안의 목록인지. 그러면 표지도 책 이름도 적지 않는다 — 모든 줄에 같은 책이
+   * 서면 출처를 알려주지도 못하면서 문장 읽을 폭만 줄인다. 쪽수와 담은 날은 남긴다.
+   */
+  inBook?: boolean;
 }) {
   const segments = markSegments(data.text, data.marks);
   /** 이 문장의 표현 중 가장 많이 만난 것 — 재회는 목록에서도 한눈에 보여야 한다 */
@@ -44,7 +50,7 @@ export function SentenceCard({
       accessibilityLabel={data.text}
       accessibilityHint="눌러서 뜻과 표현 보기"
     >
-      {data.book ? <CoverThumb book={data.book} /> : null}
+      {data.book && !inBook ? <CoverThumb book={data.book} /> : null}
 
       <View style={styles.body}>
         <Quote numberOfLines={4} style={styles.sentence}>
@@ -61,9 +67,13 @@ export function SentenceCard({
 
         <View style={styles.foot}>
           <AppText numberOfLines={1} style={styles.source}>
-            {data.book ? data.book.title : '어느 책'}
-            {data.page ? ` · p.${data.page}` : ''}
-            {data.savedLabel ? ` · ${data.savedLabel}` : ''}
+            {[
+              inBook ? null : (data.book?.title ?? '어느 책'),
+              data.page ? `p.${data.page}` : null,
+              data.savedLabel,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </AppText>
 
           {showMet && met > 1 ? (

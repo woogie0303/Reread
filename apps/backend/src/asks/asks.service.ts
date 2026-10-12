@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,12 +9,16 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Book, type BookDocument } from '../books/book.schema';
-import { ModelUnavailable } from '../common/claude';
 import { assertPageInBook } from '../common/page-in-book';
 import { ItemsService } from '../items/items.service';
 import { Reader } from '../readers/reader.schema';
 import { Sentence, type SentenceDocument } from '../sentences/sentence.schema';
-import { AnswerService, type AskedSentence } from './anthropic/answer.service';
+import {
+  ASK_MODEL,
+  ModelUnavailable,
+  type AskedSentence,
+  type AskModel,
+} from './model/ask-model';
 import { Ask, type AskDocument, type AskPick } from './ask.schema';
 import {
   MAX_PICKS,
@@ -46,7 +51,7 @@ export type AskView = {
 
 /**
  * 이만큼 지나도 답도 이유도 없는 질문은 묻는 도중에 끊긴 것이다. 모델은 45초에 포기하고
- * 다시 한 번 시도하므로(`common/claude.ts`) 정상이라면 100초 안에 '대기'든 '답'이든 정해진다.
+ * 다시 한 번 시도하므로(`model/anthropic.model.ts`) 정상이라면 100초 안에 '대기'든 '답'이든 정해진다.
  */
 export const INTERRUPTED_AFTER_MS = 3 * 60_000;
 
@@ -62,7 +67,7 @@ export class AsksService {
     @InjectModel(Sentence.name) private readonly sentences: Model<Sentence>,
     @InjectModel(Book.name) private readonly books: Model<Book>,
     @InjectModel(Reader.name) private readonly readers: Model<Reader>,
-    private readonly answer: AnswerService,
+    @Inject(ASK_MODEL) private readonly answer: AskModel,
     private readonly items: ItemsService,
     private readonly config: ConfigService,
   ) {}
@@ -261,7 +266,7 @@ export class AsksService {
         ? (reader.askBonus.credit ?? 0)
         : 0;
     const budget =
-      Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.2) + bonus;
+      Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.03) + bonus;
 
     /**
      * 묶음별로 모아 묶음 하나를 한 번으로 센다 — 남은 횟수의 어림값은 '한 번 물을 때
@@ -299,7 +304,7 @@ export class AsksService {
     const typical =
       spent && spent.batches >= 3
         ? total / spent.batches
-        : Number(this.config.get('ASK_TYPICAL_COST_USD') ?? 0.01);
+        : Number(this.config.get('ASK_TYPICAL_COST_USD') ?? 0.0002);
     const left = budget - total;
 
     return {
@@ -320,8 +325,11 @@ export class AsksService {
     const now = new Date();
     const month = monthKey(now);
     const day = dayKey(now);
-    /** 광고 한 번 수익이 질문 한 번 비용과 비슷해서, 한 번 몫만 준다(ADR-0003) */
-    const perAd = Number(this.config.get('ASK_AD_BONUS_USD') ?? 0.01);
+    /**
+     * 광고 한 번(~₩15–30)이 질문 수십 번 비용을 넘지 않는 선에서 몫을 준다(ADR-0003).
+     * 기본값은 기본 모델(Gemma, 질문 한 번 ~$0.0002) 기준이다 — 모델을 바꾸면 이 숫자도 다시 잰다.
+     */
+    const perAd = Number(this.config.get('ASK_AD_BONUS_USD') ?? 0.004);
     const perDay = Number(this.config.get('ASK_AD_DAILY_LIMIT') ?? 3);
 
     const before = await this.quota(readerId);

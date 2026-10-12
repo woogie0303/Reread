@@ -28,5 +28,16 @@ of concluding they want more of it.
   budget (`ASK_MONTHLY_BUDGET_USD`, default $0.20 ≈ 20 asks). The app shows the share used
   as a percentage and an approximate number of asks left — never the money, and never
   hidden until it runs out, because a meter that appears only at the end feels like a trap.
+- **The model was switched and the numbers retuned** (decided later). Asks moved from Haiku 4.5
+  (~$0.01 per ask) to Gemma 4 26B on Cloudflare Workers AI. Measured with thinking mode off:
+  ~875 tokens in / ~210 out for a two-sentence ask, about **$0.0002 per ask** (≈1/65 of Haiku),
+  2–7 seconds. With thinking on it took 17–38 seconds and billed ~2,000 hidden output tokens, so
+  the request switches it off. The caps follow the cost, not the other way round: defaults are now
+  `ASK_MONTHLY_BUDGET_USD=0.03` (≈150 asks), `ASK_TYPICAL_COST_USD=0.0002`,
+  `ASK_AD_BONUS_USD=0.004` (≈20 asks; a rewarded view now pays for dozens of asks, so it can give
+  more than one), `ASK_AD_DAILY_LIMIT=3`. The provider and model are swappable
+  (`ASK_PROVIDER`, `ASK_MODEL`; `asks/model/`), and **every `ASK_*` budget number must be
+  re-measured when the model changes** — the "≈ N asks" figures above are only true for the model
+  they were measured on.
 - Pricing is hard to walk back once public. Moving later from a quantity cap to a quality
   split would take features away from existing free users.

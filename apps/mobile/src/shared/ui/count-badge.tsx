@@ -4,8 +4,9 @@ import { color, type } from '@/shared/config';
 import { AppText } from './text';
 
 /**
- * "2번 만남" — 서랍에서 이 배지가 붙은 카드만이 북모리가 못 하는 일이다.
- * 그래서 파랗고, 그래서 한 번만 만난 항목에는 아예 붙지 않는다.
+ * "2번 만남" — 이 배지가 붙은 표현만이 북모리가 못 하는 일이다(재회).
+ * 그래서 포인트 색이고, 그래서 한 번만 만난 표현에는 아예 붙지 않는다.
+ * 문장 화면의 담은 표현 줄이 쓴다.
  */
 export function CountBadge({ label }: { label: string }) {
   return (

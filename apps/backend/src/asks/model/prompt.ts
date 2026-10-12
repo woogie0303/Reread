@@ -1,22 +1,22 @@
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
-import {
-  claudeFor,
-  costOf,
-  logUsage,
-  ModelUnavailable,
-  unavailable,
-  type Claude,
-} from '../../common/claude';
+import type { AskInput } from './ask-model';
 
 /**
- * 모델이 돌려줘야 하는 모양. 구조화 출력(structured outputs)으로 강제하므로
- * 답을 파싱하다 실패할 일이 없다 — 대신 스키마가 곧 명세라, 여기 적힌 설명이
- * 프롬프트만큼 중요하다.
+ * 질문 프롬프트와 응답 모양 — **모델과 무관한 공통 부분**.
+ *
+ * 모델마다 따로 두지 않는 이유는, 같은 문장을 물었을 때 모델에 따라 다른 규칙으로 답이
+ * 오면 모델을 바꿔 끼워 비교할 수 없기 때문이다. 모델을 부르는 방법(SDK·엔드포인트·가격)만
+ * 모델 파일이 다르다.
  */
-const AnswerFormat = z.object({
+
+/**
+ * 모델이 돌려줘야 하는 모양. 스키마가 곧 명세라, 여기 적힌 설명이 프롬프트만큼 중요하다.
+ *
+ * 구조화 출력을 **모델이 강제**하는지는 모델마다 다르다. Anthropic은 강제해서 파싱이 실패할
+ * 일이 없지만, 다른 공급자는 형식을 부탁할 뿐이라 받은 뒤에 이 스키마로 직접 검증해야 한다
+ * (`cloudflare.model.ts`). 그래서 이 스키마는 어느 공급자의 SDK에도 묶이지 않은 순수 zod다.
+ */
+export const AnswerFormat = z.object({
   sentences: z
     .array(
       z.object({
@@ -44,7 +44,7 @@ const AnswerFormat = z.object({
               meaning: z
                 .string()
                 .describe(
-                  '이 문장에서의 뜻 하나를 한국어 한 줄로. 사전 뜻을 나열하지 않는다.',
+                  '이 문장에서의 뜻 하나를 한국어 한 줄로. 사전에 실리는 꼴로 쓴다(동사는 ~다, 과거형 금지). 한글로만 쓰고 한자·일본어·영어를 섞지 않는다. 사전 뜻을 나열하지 않는다.',
                 ),
             }),
           )
@@ -57,25 +57,15 @@ const AnswerFormat = z.object({
 export type Answer = z.infer<typeof AnswerFormat>;
 
 /**
- * 물을 문장 하나 — 글과, 독자가 그 안에서 고른 표현들. 이미 번역을 받은 문장이면
- * `knownTranslation`이 있고, 그때는 번역을 다시 시키지 않는다 — 다시 물을 때마다
- * 문장 뜻이 달라지는 것을 막는다.
- */
-export type AskedSentence = {
-  text: string;
-  picks: string[];
-  knownTranslation?: string;
-};
-
-/**
  * 프롬프트의 붙박이 부분. 요청마다 달라지는 것(책·문장)은 여기 넣지 않는다 —
- * 캐시는 앞에서부터 한 글자만 달라도 깨지기 때문이다(ADR-0001의 '안정적인 접두부').
+ * 프롬프트 캐시는 앞에서부터 한 글자만 달라도 깨지기 때문이다(ADR-0001의 '안정적인 접두부').
+ * 캐시를 지원하지 않는 공급자에서도 이 나눔은 그대로 둔다 — 공급자를 바꿔 끼워도 같은 모양이다.
  *
- * 다만 캐시에는 최소 길이가 있고 모델마다 다르다(Sonnet 5는 1024토큰, Opus 5는 512).
+ * Anthropic은 캐시에 최소 길이가 있고 모델마다 다르다(Sonnet 5는 1024토큰, Opus 5는 512).
  * 이 프롬프트가 그보다 짧으면 cache_control을 걸어도 **조용히** 캐시되지 않는다 —
  * 오류가 나지 않으므로 usage.cache_read_input_tokens로만 확인할 수 있다.
  */
-const SYSTEM = `당신은 책을 읽는 한국어 사용자를 돕습니다. 책은 영어·일본어 같은
+export const SYSTEM = `당신은 책을 읽는 한국어 사용자를 돕습니다. 책은 영어·일본어 같은
 외국어 책일 수도 있고, 한국어 책일 수도 있습니다. 문장이 어느 언어인지는 문장을 보고
 판단합니다.
 
@@ -106,6 +96,14 @@ const SYSTEM = `당신은 책을 읽는 한국어 사용자를 돕습니다. 책
 
 - 문장도 표현도 받은 순서 그대로, 받은 개수 그대로 돌려줍니다. 빼거나 더하지 않습니다.
 - 독자가 고르지 않은 표현을 골라 주지 않습니다. 무엇을 모르는지는 독자가 압니다.
+- 문장 번역은 **원문의 어조와 시제를 그대로 따릅니다.** 해요체나 합니다체 같은 문체로
+  통일하지 않습니다. 서술이면 서술로, 대화체면 대화체로, 격식 있는 말은 격식 있게 옮깁니다.
+  어조는 장면의 일부이므로 바꾸지 않습니다.
+- 표현의 뜻(meaning)은 **사전에 실리는 꼴**로 씁니다. 문장에 쓰인 시제와 어미를 따라가지
+  않습니다. 동사는 '대수롭지 않게 넘기다'처럼 '~다'로 끝내고, 명사나 구는 '희미한 빛'처럼
+  끝맺습니다. '넘겼다'·'알아봤다'처럼 과거형으로 쓰지 않습니다.
+- 번역과 뜻은 **한국어(한글)로만** 씁니다. 한자·일본어(가나)·영어를 섞지 않습니다.
+  원문이 일본어여도 뜻풀이는 일본어가 아니라 한국어로 씁니다.
 - 뜻은 **그 문장에서의 뜻 하나**만, 한국어 한 줄로 씁니다. 같은 표현도 문장이 다르면
   뜻이 다릅니다. make out은 어떤 문장에서는 '겨우 알아보다'이고 다른 문장에서는
   그렇지 않습니다. 사전 뜻을 여러 개 나열하지 않습니다.
@@ -114,81 +112,8 @@ const SYSTEM = `당신은 책을 읽는 한국어 사용자를 돕습니다. 책
 - 사진에서 읽어낸 글이라 글자가 조금 틀리거나 줄 끝 하이픈이 남아 있을 수 있습니다.
   뜻은 바로잡은 글을 기준으로 쓰되, surface는 받은 그대로 둡니다.`;
 
-/**
- * 한 쪽에서 고른 문장들을 묻는 한 번의 호출. 문장마다 부르지 않는다 — 묶음째
- * 한 번에 물어야 같은 맥락(같은 책·같은 쪽)을 한 번만 싣고, 독자도 한 번 기다린다.
- *
- * 파서도 사전도 두지 않는다. 문장을 설명하는 모델이 이미 문장을 외울 만한
- * 덩어리로 나누기 때문에, 같은 일을 하는 두 번째 조각을 두면 서로 다른 답을
- * 낼 뿐이다(ADR-0002).
- */
-@Injectable()
-export class AnswerService {
-  private readonly log = new Logger(AnswerService.name);
-  private readonly claude: Claude;
-
-  constructor(config: ConfigService) {
-    this.claude = claudeFor(config, 'ASK_MODEL', this.log);
-  }
-
-  get ready(): boolean {
-    return Boolean(this.claude.client);
-  }
-
-  get modelName(): string {
-    return this.claude.model;
-  }
-
-  async answer(input: {
-    sentences: AskedSentence[];
-    bookTitle: string;
-    author: string;
-    page?: number;
-  }): Promise<{ answer: Answer; cost: number }> {
-    const { client, model } = this.claude;
-    if (!client) throw new ModelUnavailable('AI가 설정되지 않았습니다.');
-
-    try {
-      const response = await client.messages.parse({
-        model,
-        /** 다섯 문장에 표현 여덟 개씩이어도 3천 토큰 안쪽이다. 크게 잡을수록 오래 걸린다. */
-        max_tokens: 6000,
-        /** 붙박이 부분만 캐시에 올린다 */
-        system: [
-          { type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } },
-        ],
-        messages: [{ role: 'user', content: userPrompt(input) }],
-        output_config: { format: zodOutputFormat(AnswerFormat) },
-      });
-
-      logUsage(this.log, 'ask', response.usage);
-
-      if (response.stop_reason === 'refusal') {
-        throw new ModelUnavailable(
-          `모델이 답을 거절했습니다: ${response.stop_details?.category ?? '이유 없음'}`,
-        );
-      }
-
-      const parsed = response.parsed_output;
-      if (!parsed) throw new ModelUnavailable('모델의 답을 읽지 못했습니다.');
-
-      return {
-        answer: parsed,
-        cost: costOf(model, response.usage, this.log),
-      };
-    } catch (error) {
-      throw unavailable(error, this.log);
-    }
-  }
-}
-
 /** 요청마다 달라지는 것들 — 캐시가 깨지지 않게 시스템이 아니라 여기 싣는다 */
-function userPrompt(input: {
-  sentences: AskedSentence[];
-  bookTitle: string;
-  author: string;
-  page?: number;
-}): string {
+export function userPrompt(input: AskInput): string {
   const where = input.page
     ? `${input.bookTitle} p.${input.page}`
     : input.bookTitle;

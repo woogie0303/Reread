@@ -1,4 +1,5 @@
-import type { Answer, AskedSentence } from './anthropic/answer.service';
+import type { AskedSentence } from './model/ask-model';
+import type { Answer } from './model/prompt';
 
 /** 문장 하나의 답 — 고른 표현마다 사전 꼴과 뜻이 짝지어졌다 */
 export type MatchedAnswer = {

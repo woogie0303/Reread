@@ -37,7 +37,7 @@ pnpm 워크스페이스 + Turborepo.
   (`widgets/expression-drawer/ui/expression-contrast.tsx`가 원형이다.)
 
 출처는 라벨 없이 보인다. 모바일은 목록 카드마다 **책 표지** 썸네일(`CoverThumb`)을
-세우고, 표지가 없는 책은 책마다 정한 그라디언트 **책등 색**(`spine`)으로 채운다. 웹은 아직 목업이라 카드 왼쪽 4px 엣지가
+세우고, 표지가 없는 책은 종이색 바탕 위에 **책 읽는 캐릭터**(`Mark name="reading"`)로 채운다. 웹은 아직 목업이라 카드 왼쪽 4px 엣지가
 책등 색을 물려받는다(`entities/book/model/mock.ts`). 새 카드를 만들 때도 출처를 이렇게
 보인다.
 

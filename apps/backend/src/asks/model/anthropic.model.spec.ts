@@ -1,8 +1,9 @@
 import { Logger } from '@nestjs/common';
-import { costOf } from './claude';
+import { costOf } from './anthropic.model';
 
-describe('costOf', () => {
-  const log = { warn: jest.fn() } as unknown as Logger;
+describe('costOf (Anthropic)', () => {
+  const warn = jest.fn();
+  const log = { warn } as unknown as Logger;
 
   it('입력·출력·캐시 토큰을 Haiku 가격으로 매긴다', () => {
     const cost = costOf(
@@ -34,6 +35,6 @@ describe('costOf', () => {
       log,
     );
     expect(cost).toBeCloseTo(1);
-    expect(log.warn).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalled();
   });
 });

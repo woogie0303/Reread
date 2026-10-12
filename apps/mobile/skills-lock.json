@@ -97,6 +97,12 @@
       "skillPath": "skills/misc/migrate-to-shoehorn/SKILL.md",
       "computedHash": "6397731ced114f3657aa88b55ed13d1344a56d77ca449c568e3200c21740fa99"
     },
+    "mobile-app-ui-design": {
+      "source": "ceorkm/mobile-app-ui-design",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "fbeba4ea8cc5063c9280a0f29af46f05ff66326d49ff7e59b61ee021b4d424c8"
+    },
     "prototype": {
       "source": "mattpocock/skills",
       "sourceType": "github",

@@ -39,6 +39,7 @@ export function SentenceField({
         <View style={styles.tools}>
           <Tap
             style={styles.camera}
+            hitSlop={4}
             onPress={onCapture}
             accessibilityRole="button"
             accessibilityLabel="읽던 쪽 촬영"

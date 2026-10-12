@@ -4,7 +4,13 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSentenceFeed } from '@/entities/sentence/api/feed.api';
 import { SentenceCard } from '@/entities/sentence/ui/sentence-card';
 import { color, type } from '@/shared/config';
-import { AppText, EmptyState, Tap } from '@/shared/ui';
+import {
+  ActionButton,
+  AppText,
+  CameraIcon,
+  EmptyState,
+  Tap,
+} from '@/shared/ui';
 import {
   DRAWER_MATCH,
   DrawerFilterRow,
@@ -29,11 +35,14 @@ const EMPTY: Record<DrawerFilter, string> = {
 export function DrawerList({
   query,
   onOpen,
+  onCapture,
 }: {
   /** 검색어 — 문장이나 번역에 들어 있으면 남긴다. 갈래와 함께 걸린다. */
   query?: string;
   /** liked — '마음에 들었던 문장' 갈래에서 눌렀는지. 문장 화면이 그걸 보고 모양을 고른다. */
   onOpen?: (sentenceId: string, liked: boolean) => void;
+  /** 아직 아무것도 없을 때 빈자리에서 바로 찍으러 간다 */
+  onCapture?: () => void;
 }) {
   const [picked, setPicked] = useState<DrawerFilter>();
   const { feed, isPending, error, hasMore, loadingMore, loadMore } =
@@ -125,6 +134,15 @@ export function DrawerList({
             needle || feed.length
               ? undefined
               : '읽다 막힌 쪽을 찍어서 문장을 담아보세요.'
+          }
+          action={
+            !needle && !feed.length && onCapture ? (
+              <ActionButton
+                label="읽던 쪽 찍기"
+                icon={<CameraIcon size={18} color={color.text.onInk} />}
+                onPress={onCapture}
+              />
+            ) : undefined
           }
         />
       )}

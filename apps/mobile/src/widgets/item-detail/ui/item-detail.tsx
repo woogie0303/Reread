@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { toBook } from '@/entities/book/api/book.api';
 import { CoverThumb } from '@/entities/book/ui/cover-thumb';
+import { markSegments } from '@/entities/sentence/lib/segments';
 import type { ApiItemDetail } from '@/shared/api/types';
 import { color, type } from '@/shared/config';
 import { daysBetween, gapLabel, savedLabel } from '@/shared/lib/date';
@@ -51,6 +52,16 @@ export function ItemDetail({
       : [],
   );
   const books = uniqueBooks(encounters.map((met) => met.book));
+  /**
+   * 문장마다 이 표현이 나타난 꼴 — 서랍·홈과 같은 밑줄을 긋는다. 같은 표현도 문장마다
+   * 꼴이 달라서(made out / make out) 문장 id로 찾는다. 한동안 이 화면만 밑줄이 없어서,
+   * 긴 문장에서는 표현이 어디 있는지 다시 찾아 읽어야 했다.
+   */
+  const surfaceOf = new Map(
+    item.encounters.flatMap((met) =>
+      met.surface ? [[met.sentenceId, met.surface] as const] : [],
+    ),
+  );
   const gap =
     encounters.length > 1
       ? gapLabel(
@@ -126,7 +137,28 @@ export function ItemDetail({
               ) : null}
               <CoverThumb book={toBook(encounter.book)} style={styles.thumb} />
               <View style={styles.cardBody}>
-                <Quote style={styles.sentence}>{encounter.sentence.text}</Quote>
+                <Quote style={styles.sentence}>
+                  {markSegments(
+                    encounter.sentence.text,
+                    surfaceOf.has(encounter.sentenceId)
+                      ? [
+                          {
+                            surface: surfaceOf.get(encounter.sentenceId)!,
+                            term: item.term,
+                            meaning: item.meaning,
+                          },
+                        ]
+                      : [],
+                  ).map((seg, i) =>
+                    seg.mark ? (
+                      <Quote key={i} style={styles.marked}>
+                        {seg.text}
+                      </Quote>
+                    ) : (
+                      <Quote key={i}>{seg.text}</Quote>
+                    ),
+                  )}
+                </Quote>
                 <AppText style={styles.source}>
                   {[
                     encounter.book.title,
@@ -232,6 +264,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sentence: { fontSize: 15, lineHeight: 23, color: color.text.primary },
+  /** 서랍의 밑줄과 같다 — 같은 표현이 화면마다 다르게 칠해지면 같은 표현으로 안 보인다 */
+  marked: {
+    color: color.primary,
+    textDecorationLine: 'underline',
+    textDecorationColor: color.primaryLine,
+  },
   source: { ...type.caption2, color: color.text.meta },
   note: { ...type.caption1, color: color.text.secondary, marginTop: 2 },
 
