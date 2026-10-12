@@ -175,14 +175,13 @@ export default function BookScreen() {
               currentPage: page,
               totalPages: book.pages ?? 0,
             }}
-            onOpenItem={(itemId) =>
-              router.push({ pathname: '/item/[id]', params: { id: itemId } })
-            }
-            onOpenSentence={(sentenceId) =>
-              /* 책 화면에서 문장으로 가는 길은 '마음에 들었던 문장' 탭뿐이다 */
+            onOpenSentence={(sentenceId, liked) =>
+              /* 서랍과 같다 — 어느 갈래에서 열었는지가 문장 화면의 지우기 모양을 정한다 */
               router.push({
                 pathname: '/sentence/[id]',
-                params: { id: sentenceId, from: 'liked' },
+                params: liked
+                  ? { id: sentenceId, from: 'liked' }
+                  : { id: sentenceId },
               })
             }
             onPressProgress={() =>

@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { Book } from '@/entities/book/model/types';
-import { useItems } from '@/entities/lexical-item/api/item.api';
 import type { ReadingProgress } from '@/entities/reading/model/types';
+import { useBookSentenceFeed } from '@/entities/sentence/api/feed.api';
 import { useLikedSentences } from '@/entities/sentence/api/sentence.api';
+import { SentenceCard } from '@/entities/sentence/ui/sentence-card';
+import { color } from '@/shared/config';
 import { EmptyState } from '@/shared/ui';
 import { BookHero } from '@/widgets/book-hero/ui/book-hero';
 import { BookPrimer } from '@/widgets/book-primer/ui/book-primer';
-import { ItemShelf } from '@/widgets/item-shelf/ui/item-shelf';
 import { SentenceShelf } from '@/widgets/sentence-shelf/ui/sentence-shelf';
 import { BookTabs, type BookTab } from './book-tabs';
 
@@ -16,7 +17,9 @@ import { BookTabs, type BookTab } from './book-tabs';
  * 책 한 권. 읽은 데까지의 기록에 더해, **그냥 마음에 들어서 담아둔 문장**이
  * 여기에 산다 — 어휘 항목이 없는 문장은 서랍에 걸릴 데가 없기 때문이다. (Q25)
  *
- * 담은 표현과 마음에 든 문장은 탭으로 갈라 놓는다. 리텔링(챕터를 옮겨 적기)은
+ * 담은 표현과 마음에 든 문장은 탭으로 갈라 놓는다. '담은 표현'은 서랍의 같은 갈래와
+ * 같은 줄(`SentenceCard`)이다 — 표현이 아니라 표현을 담은 **문장**이 서고 표현은 그
+ * 안의 밑줄이다(ADR-0004). 이미 그 책 안이라 표지와 책 이름은 뺀다. 리텔링(챕터를 옮겨 적기)은
  * 걷어냈다 — 내 생각은 이제 문장마다 스레드처럼 달아 둔다(문장 화면).
  *
  * 머리는 홈의 '읽고 있는 책'과 같은 판(`widgets/book-hero`)을 쓴다. 홈에서
@@ -28,7 +31,6 @@ export function BookDetail({
   book,
   initialTab,
   progress,
-  onOpenItem,
   onOpenSentence,
   onPressProgress,
 }: {
@@ -36,12 +38,14 @@ export function BookDetail({
   /** 처음 펼 갈래 — 안 주면 담은 표현 */
   initialTab?: BookTab;
   progress?: ReadingProgress;
-  onOpenItem?: (id: string) => void;
-  onOpenSentence?: (id: string) => void;
+  /** liked — '마음에 들었던 문장' 갈래에서 눌렀는지. 문장 화면이 그걸 보고 모양을 고른다. */
+  onOpenSentence?: (id: string, liked: boolean) => void;
   onPressProgress?: () => void;
 }) {
   const [tab, setTab] = useState<BookTab>(initialTab ?? 'items');
-  const { data: items = [] } = useItems({ bookId: book.id });
+  const { rows: claimed, isPending: claimedPending } = useBookSentenceFeed(
+    book.id,
+  );
   const { data: sentences = [] } = useLikedSentences(book.id);
   const liked = sentences.map((sentence) => ({
     id: sentence._id,
@@ -74,17 +78,24 @@ export function BookDetail({
         <BookTabs
           value={tab}
           onChange={setTab}
-          counts={{ items: items.length, liked: liked.length }}
+          counts={{ items: claimed.length, liked: liked.length }}
         />
 
         {tab === 'items' ? (
-          items.length ? (
-            <ItemShelf
-              items={items}
-              onPressItem={onOpenItem}
-              title={null}
-              layout="grid"
-            />
+          claimedPending ? (
+            <ActivityIndicator color={color.text.assistive} />
+          ) : claimed.length ? (
+            <View style={styles.list}>
+              {claimed.map((row) => (
+                <SentenceCard
+                  key={row.id}
+                  data={row}
+                  inBook
+                  showMet
+                  onOpen={(id) => onOpenSentence?.(id, false)}
+                />
+              ))}
+            </View>
           ) : (
             <EmptyState
               mark="empty"
@@ -97,7 +108,7 @@ export function BookDetail({
           <SentenceShelf
             sentences={liked}
             title={null}
-            onPressSentence={onOpenSentence}
+            onPressSentence={(id) => onOpenSentence?.(id, true)}
           />
         ) : (
           <EmptyState
@@ -115,4 +126,6 @@ export function BookDetail({
 const styles = StyleSheet.create({
   wrap: { gap: 24 },
   tabs: { gap: 16 },
+  /** 서랍 목록과 같은 간격 */
+  list: { gap: 10 },
 });
