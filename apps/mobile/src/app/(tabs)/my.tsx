@@ -14,7 +14,7 @@ import {
   AltPanel,
   AppText,
   DisclosureRow,
-  Mark,
+
   ProgressBar,
   Tap,
 } from '@/shared/ui';
@@ -112,16 +112,13 @@ export default function MyScreen() {
           {left > 0 ? (
             <AppText style={styles.quotaHint}>
               {used === 0
-                ? '물어볼 때마다 쓴 만큼 올라가요. 매달 1일에 0%로 돌아가요.'
-                : '한 번에 여러 문장을 물으면 조금 더 올라가요. 매달 1일에 0%로 돌아가요.'}
+                ? '물어볼 때마다 쓴 만큼 올라가요.'
+                : '한 번에 여러 문장을 물으면 조금 더 올라가요.'}
             </AppText>
           ) : (
-            <View style={styles.quotaDone}>
-              <Mark name="quota-done" size={40} />
-              <AppText style={styles.quotaHint}>
-                다 쓰셨어요. 담은 문장은 다음 달에 자동으로 풀려요.
-              </AppText>
-            </View>
+            <AppText style={styles.quotaHint}>
+              다 쓰셨어요. 담은 문장은 다음 달에 다시 물어볼 수 있어요.
+            </AppText>
           )}
         </AltPanel>
 
@@ -213,7 +210,7 @@ const styles = StyleSheet.create({
   quotaLabel: { ...type.label2, fontWeight: '700', color: color.text.primary },
   quotaValue: { ...type.label2, color: color.text.meta },
   quotaHint: { ...type.caption2, color: color.text.secondary, flex: 1 },
-  quotaDone: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+
 
   statsPanel: { padding: 18, gap: 14 },
   row: {

@@ -148,7 +148,7 @@ export default function PendingScreen() {
             <AppText style={styles.rewardedBody}>
               {adsExhausted
                 ? '오늘 받을 수 있는 광고 보상을 모두 받았어요. 내일 다시 받을 수 있어요.'
-                : '광고를 한 번 보면 질문 3번이 더 생겨요. 읽는 중엔 광고가 나오지 않아요.'}
+                : '광고를 보면 문장을 더 물어볼 수 있어요.'}
             </AppText>
             <ActionButton
               label={
@@ -165,20 +165,20 @@ export default function PendingScreen() {
         ) : null}
 
         {/* 마지막 하나를 풀고 나면 0개가 된다 — 그때 '0개가 기다린다'고 하지 않는다 */}
-        <AltPanel style={styles.hero}>
-          <AppText style={styles.heroTitle}>
-            {pending.length
-              ? `문장 ${pending.length}개가\n답을 기다리고 있어요`
-              : '기다리는 문장이\n없어요'}
-          </AppText>
-          <AppText style={styles.heroBody}>
-            {!pending.length
-              ? '담아둔 문장은 모두 풀렸어요.'
-              : left > 0
-                ? `이번 달 사용량 ${usagePercent(quota?.ratio)}%. 하나씩 풀어볼까요?`
-                : '이번 달 질문을 다 쓰셨어요. 다음 달 1일에 자동으로 풀려요.'}
-          </AppText>
-        </AltPanel>
+        {left > 0 || !pending.length ? (
+          <AltPanel style={styles.hero}>
+            <AppText style={styles.heroTitle}>
+              {pending.length
+                ? `문장 ${pending.length}개가\n답을 기다리고 있어요`
+                : '기다리는 문장이\n없어요'}
+            </AppText>
+            <AppText style={styles.heroBody}>
+              {!pending.length
+                ? '담아둔 문장은 모두 풀렸어요.'
+                : `이번 달 사용량 ${usagePercent(quota?.ratio)}%. 하나씩 풀어볼까요?`}
+            </AppText>
+          </AltPanel>
+        ) : null}
 
         <PendingList
           asks={pending.map((view) => ({

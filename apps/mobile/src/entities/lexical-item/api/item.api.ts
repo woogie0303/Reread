@@ -10,7 +10,6 @@ import type {
   ItemStatus,
 } from '@/shared/api/types';
 import { savedLabel } from '@/shared/lib/date';
-import { sampleItems } from '../lib/sample';
 
 /** 서랍의 한 줄에 필요한 것 전부 — 목록 한 번으로 온다 */
 export type ItemSummary = {
@@ -92,8 +91,6 @@ export function useItems(params?: {
       const rows = (
         await api<ApiItemSummary[]>(`/items${query ? `?${query}` : ''}`)
       ).map(toSummary);
-      /** 담아둔 것이 없으면 개발 빌드에서만 가짜 열 줄을 그린다. 배포에는 안 돈다. */
-      if (__DEV__ && !rows.length && !query) return sampleItems();
       return rows;
     },
   });

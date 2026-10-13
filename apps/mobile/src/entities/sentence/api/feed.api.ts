@@ -5,7 +5,6 @@ import { useBooks } from '@/entities/book/api/book.api';
 import { useItems } from '@/entities/lexical-item/api/item.api';
 import { api } from '@/shared/api/client';
 import type { ApiAskView, ApiSentence } from '@/shared/api/types';
-import { sampleFeed } from '@/entities/lexical-item/lib/sample';
 import { buildFeed } from '../lib/feed';
 
 /** 한 번에 더 받아오는 줄 수 */
@@ -62,8 +61,7 @@ export function useSentenceFeed() {
     (asks.data?.length ?? 0) >= limit || (liked.data?.length ?? 0) >= limit;
 
   return {
-    /** 담아둔 문장이 없으면 개발 빌드에서만 가짜 열 줄. 배포에는 안 돈다. */
-    feed: __DEV__ && settled && !all.length ? sampleFeed() : feed,
+    feed,
     /** 답을 기다리는 문장 — 목록 대신 서랍 위 한 줄이 알린다 */
     waiting,
     isPending: asks.isPending || liked.isPending,

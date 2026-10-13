@@ -53,7 +53,7 @@ export default function HomeScreen() {
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + gutter },
+        { paddingTop: insets.top + gutter, flexGrow: 1 },
       ]}
       showsVerticalScrollIndicator={false}
     >
@@ -114,11 +114,12 @@ export default function HomeScreen() {
           <EmptyState
             mark="empty"
             title="아직 읽고 있는 책이 없어요"
-            body="읽던 원서를 한 권 들이면, 막힌 문장을 여기서 바로 물어볼 수 있어요."
+            body="읽던 원서를 한 권 등록하면, 막힌 문장을 여기서 바로 물어볼 수 있어요."
           />
           <ActionButton
             label="책 추가하기"
             onPress={() => router.push('/book-pick')}
+            style={{ alignSelf: 'stretch' }}
           />
         </View>
       )}
@@ -147,5 +148,5 @@ const styles = StyleSheet.create({
     gap: gutter,
   },
   spinner: { paddingVertical: 60 },
-  blank: { paddingTop: 24, gap: 8 },
+  blank: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
 });

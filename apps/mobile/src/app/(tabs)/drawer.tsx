@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSentenceFeed } from '@/entities/sentence/api/feed.api';
 import { color, gutter, type } from '@/shared/config';
 import { AppText, Icon, SearchField, Tap } from '@/shared/ui';
-import { useOpenScan } from '@/widgets/capture/lib/use-open-scan';
 import { DrawerList } from '@/widgets/drawer/ui/drawer-list';
 
 /**
@@ -19,7 +18,6 @@ import { DrawerList } from '@/widgets/drawer/ui/drawer-list';
 export default function DrawerScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const openScan = useOpenScan();
   const { feed, waiting: waitingRows } = useSentenceFeed();
   /** 답을 기다리는 문장 — 목록엔 없고, 할 일이라 서랍 위에서 말을 건다 */
   const waiting = waitingRows.length;
@@ -48,23 +46,25 @@ export default function DrawerScreen() {
             <AppText style={styles.summary}>문장 {feed.length}개</AppText>
           </View>
         )}
-        <Tap
-          hitSlop={12}
-          onPress={() => (searching ? closeSearch() : setSearching(true))}
-          accessibilityRole="button"
-          accessibilityLabel={searching ? '검색 닫기' : '문장 검색'}
-        >
-          <Icon
-            name={searching ? 'close' : 'search'}
-            size={21}
-            color={color.text.primary}
-          />
-        </Tap>
+        {feed.length > 0 || searching ? (
+          <Tap
+            hitSlop={12}
+            onPress={() => (searching ? closeSearch() : setSearching(true))}
+            accessibilityRole="button"
+            accessibilityLabel={searching ? '검색 닫기' : '문장 검색'}
+          >
+            <Icon
+              name={searching ? 'close' : 'search'}
+              size={21}
+              color={color.text.primary}
+            />
+          </Tap>
+        ) : null}
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, styles.contentGrow]}
         style={styles.scroll}
       >
         {/*
@@ -88,7 +88,6 @@ export default function DrawerScreen() {
 
         <DrawerList
           query={query}
-          onCapture={() => openScan()}
           onOpen={(id, liked) =>
             router.push({
               pathname: '/sentence/[id]',
@@ -137,4 +136,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: color.primary,
   },
+  contentGrow: { flexGrow: 1 },
 });
