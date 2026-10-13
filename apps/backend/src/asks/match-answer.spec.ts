@@ -125,4 +125,44 @@ describe('matchAnswer — 이미 번역이 있는 문장', () => {
     );
     expect(first?.translation).toBe('전에 받은 번역');
   });
+
+  it('번역에 실제로 있는 translationSpan만 남기고, 없는 글자는 버린다', () => {
+    const result = matchAnswer(asked, {
+      sentences: [
+        {
+          translation: '그녀는 별일 아닌 듯 넘겼지만 마음에 남았다.',
+          picks: [
+            {
+              surface: 'brushed it off',
+              term: 'brush it off',
+              meaning: '별일 아닌 듯 넘기다',
+              translationSpan: '별일 아닌 듯 넘겼지만',
+            },
+          ],
+        },
+        {
+          translation: '그녀가 떠났는지 알아볼 수 없었다.',
+          picks: [
+            {
+              surface: 'make out',
+              term: 'make out',
+              meaning: '알아보다',
+              /** 번역에 없는 글자 — 어미를 바꿔 적었다 */
+              translationSpan: '알아봤다',
+            },
+            {
+              surface: 'whether',
+              term: 'whether',
+              meaning: '~인지 아닌지',
+              translationSpan: '떠났는지',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result[0]?.picks[0].translationSpan).toBe('별일 아닌 듯 넘겼지만');
+    expect(result[1]?.picks[0].translationSpan).toBeUndefined();
+    expect(result[1]?.picks[1].translationSpan).toBe('떠났는지');
+  });
 });

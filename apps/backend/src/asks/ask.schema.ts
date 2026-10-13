@@ -33,6 +33,13 @@ export class AskPick {
   @Prop()
   meaning?: string;
 
+  /**
+   * 번역(`Ask.translation`)에서 이 표현에 해당하는 글자. 앱이 번역에 같은 밑줄을 긋는 데 쓴다.
+   * 번역에 실제로 있는 글자만 담긴다(`matchAnswer`). 없으면 줄을 긋지 않는다.
+   */
+  @Prop()
+  translationSpan?: string;
+
   /** 담긴 어휘 항목 */
   @Prop({ type: Types.ObjectId, ref: 'LexicalItem' })
   itemId?: Types.ObjectId;

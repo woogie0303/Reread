@@ -4,7 +4,13 @@ import type { Answer } from './model/prompt';
 /** 문장 하나의 답 — 고른 표현마다 사전 꼴과 뜻이 짝지어졌다 */
 export type MatchedAnswer = {
   translation: string;
-  picks: { surface: string; term: string; meaning: string }[];
+  picks: {
+    surface: string;
+    term: string;
+    meaning: string;
+    /** 번역에서 이 표현에 해당하는 글자 — 번역에 실제로 있을 때만 */
+    translationSpan?: string;
+  }[];
 };
 
 const loose = (text: string) => text.trim().toLowerCase();
@@ -35,10 +41,13 @@ export function matchAnswer(
         got.picks.find((pick) => loose(pick.surface) === loose(surface)) ??
         (got.picks.length === sentence.picks.length ? got.picks[j] : undefined);
       if (!hit?.term.trim() || !hit.meaning.trim()) return null;
+      /** 번역에 없는 글자는 버린다 — 줄을 그을 자리를 찾지 못하는 값이 남아 있으면 안 된다 */
+      const span = hit.translationSpan?.trim();
       picks.push({
         surface,
         term: hit.term.trim(),
         meaning: hit.meaning.trim(),
+        translationSpan: span && translation.includes(span) ? span : undefined,
       });
     }
 

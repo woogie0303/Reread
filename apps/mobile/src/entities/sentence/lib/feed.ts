@@ -42,6 +42,11 @@ export function buildFeed(input: {
         favorite: view.sentence.favorite,
         pending: !answered,
         translation: answered ? view.ask.translation : undefined,
+        translationSpans: answered
+          ? view.ask.picks.flatMap((pick) =>
+              pick.translationSpan ? [pick.translationSpan] : [],
+            )
+          : undefined,
         marks: marks.get(view.sentence._id) ?? [],
         claimed: claimed.has(view.sentence._id),
         savedLabel: savedLabel(view.sentence.createdAt),

@@ -44,6 +44,17 @@ export function SentenceDetail({
 }) {
   const [reveal, setReveal] = useState(Boolean(initialReveal));
   const segments = markSegments(row.text, row.marks);
+  /** 번역의 담은 표현 — 영어 쪽과 같은 규칙으로 찾아 같은 밑줄을 긋는다 */
+  const translationSegments = row.translation
+    ? markSegments(
+        row.translation,
+        (row.translationSpans ?? []).map((surface) => ({
+          surface,
+          term: surface,
+          meaning: '',
+        })),
+      )
+    : [];
 
   return (
     <View style={styles.wrap}>
@@ -111,7 +122,17 @@ export function SentenceDetail({
             </AppText>
           </Tap>
           {reveal ? (
-            <AppText style={styles.translationText}>{row.translation}</AppText>
+            <AppText style={styles.translationText}>
+              {translationSegments.map((seg, i) =>
+                seg.mark ? (
+                  <AppText key={i} style={styles.markedKo}>
+                    {seg.text}
+                  </AppText>
+                ) : (
+                  seg.text
+                ),
+              )}
+            </AppText>
           ) : null}
         </View>
       ) : null}
@@ -165,6 +186,13 @@ const styles = StyleSheet.create({
 
   sentence: { fontSize: 21, lineHeight: 33, color: color.text.primary },
   marked: {
+    color: color.primary,
+    textDecorationLine: 'underline',
+    textDecorationColor: color.primaryLine,
+  },
+
+  /** 번역 속 담은 표현 — 영어 쪽 `marked`와 같은 색·밑줄 */
+  markedKo: {
     color: color.primary,
     textDecorationLine: 'underline',
     textDecorationColor: color.primaryLine,

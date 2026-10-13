@@ -117,6 +117,8 @@ export type ApiPick = {
   surface: string;
   term?: string;
   meaning?: string;
+  /** 번역에서 이 표현에 해당하는 글자 — 번역에 같은 밑줄을 긋는다. 없으면 긋지 않는다. */
+  translationSpan?: string;
   itemId?: string;
 };
 

@@ -39,6 +39,8 @@ export type SentenceCardData = {
   /** 물어봤지만 아직 답이 없다(할당량 소진·연결 실패) */
   pending?: boolean;
   translation?: string;
+  /** 번역에서 담은 표현에 해당하는 글자들 — 번역에 담은 표현과 같은 밑줄이 선다 */
+  translationSpans?: string[];
   marks: SentenceMark[];
   /**
    * 이 문장에서 표현을 하나라도 담았는지. `marks`와 다르다 — 밑줄은 `surface`가
