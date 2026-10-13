@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, TextInput, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -16,6 +16,7 @@ import type { ProviderName } from '@/shared/api/types';
 import { color, gutter, type } from '@/shared/config';
 import {
   configured,
+  isReviewModeEnabled,
   SignInCancelled,
   SignInFailed,
 } from '@/shared/session/oauth';
@@ -38,8 +39,15 @@ const PROVIDERS: ProviderName[] = ['kakao', 'naver', 'google', 'apple'];
  */
 export default function SignInScreen() {
   const insets = useSafeAreaInsets();
-  const { signIn, problem } = useSession();
+  const { signIn, reviewSignIn, problem } = useSession();
   const [busy, setBusy] = useState<string | null>(null);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewUsername, setReviewUsername] = useState('');
+  const [reviewPassword, setReviewPassword] = useState('');
+
+  useEffect(() => {
+    isReviewModeEnabled().then(setReviewMode);
+  }, []);
 
   const attempt = async (label: string, run: () => Promise<void>) => {
     setBusy(label);
@@ -105,6 +113,49 @@ export default function SignInScreen() {
             />
           ))}
         </View>
+
+        {reviewMode ? (
+          <View style={styles.reviewForm}>
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="아이디"
+              placeholderTextColor={color.text.meta}
+              value={reviewUsername}
+              onChangeText={setReviewUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={busy === null}
+            />
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="비밀번호"
+              placeholderTextColor={color.text.meta}
+              value={reviewPassword}
+              onChangeText={setReviewPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              editable={busy === null}
+            />
+            <Tap
+              style={[
+                styles.reviewBtn,
+                (!reviewUsername || !reviewPassword || (busy !== null && busy !== 'review')) &&
+                  styles.reviewBtnOff,
+              ]}
+              accessibilityLabel="심사용 계정으로 로그인"
+              onPress={() =>
+                attempt('review', () => reviewSignIn(reviewUsername, reviewPassword))
+              }
+              disabled={!reviewUsername || !reviewPassword || (busy !== null && busy !== 'review')}
+            >
+              {busy === 'review' ? (
+                <ActivityIndicator color={color.text.onPrimary} />
+              ) : (
+                <AppText style={styles.reviewBtnText}>로그인</AppText>
+              )}
+            </Tap>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -268,4 +319,25 @@ const styles = StyleSheet.create({
   unready: { opacity: 0.32 },
 
   dev: { marginTop: 4 },
+
+  reviewForm: { gap: 10, marginTop: 4 },
+  reviewInput: {
+    ...type.body2,
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: color.border.default,
+    color: color.text.primary,
+    backgroundColor: color.surface.base,
+  },
+  reviewBtn: {
+    height: 48,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.primary,
+  },
+  reviewBtnOff: { opacity: 0.4 },
+  reviewBtnText: { ...type.label1, color: color.text.onInk },
 });

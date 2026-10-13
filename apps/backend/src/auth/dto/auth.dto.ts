@@ -108,6 +108,19 @@ export class OAuthCallbackDto {
   iss?: string;
 }
 
+/** `POST /auth/review` — 심사용 계정 로그인 */
+export class ReviewSignInDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(40)
+  username!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(40)
+  password!: string;
+}
+
 /**
  * `POST /auth/exchange` — 딥링크로 받은 티켓을 진짜 토큰으로 바꾼다.
  *

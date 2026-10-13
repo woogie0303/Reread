@@ -16,7 +16,7 @@ import type {
   ReaderView,
   SignInResult,
 } from '@/shared/api/types';
-import { prepareSocialSignIn, signInWith } from './oauth';
+import { prepareSocialSignIn, reviewSignIn as doReviewSignIn, signInWith } from './oauth';
 
 type Status = 'loading' | 'in' | 'out';
 
@@ -26,6 +26,7 @@ type Session = {
   /** 들어오지 못한 이유 — 로그인 화면이 그대로 보여준다 */
   problem: string | null;
   signIn: (provider: ProviderName) => Promise<void>;
+  reviewSignIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -101,6 +102,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       reader,
       problem,
       signIn: async (provider) => enter(await signInWith(provider)),
+      reviewSignIn: async (username, password) => enter(await doReviewSignIn(username, password)),
       signOut: async () => {
         /** 남의 계정으로 알림이 울리지 않게 — 예약과 설정을 먼저 지운다 */
         await clearReminder();

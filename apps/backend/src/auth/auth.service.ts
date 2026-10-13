@@ -94,6 +94,33 @@ export class AuthService {
     );
   }
 
+  /** IS_APPLE_REVIEW=true 일 때만 동작하는 심사용 계정 로그인 */
+  async reviewSignIn(username: string, password: string): Promise<SignInResult> {
+    const enabled = this.config.get<string>('IS_APPLE_REVIEW') === 'true';
+    if (!enabled) throw new UnauthorizedException('심사 모드가 꺼져 있어요.');
+
+    const expectedUser = this.config.get<string>('REVIEW_USERNAME');
+    const expectedPass = this.config.get<string>('REVIEW_PASSWORD');
+
+    if (!expectedUser || !expectedPass) {
+      throw new UnauthorizedException('심사 계정이 설정되지 않았어요.');
+    }
+    if (username !== expectedUser || password !== expectedPass) {
+      throw new UnauthorizedException('아이디 또는 비밀번호가 맞지 않아요.');
+    }
+
+    const reader = await this.findOrCreate('apple', {
+      providerId: 'review-account-reread-001',
+      nickname: '심사용 계정',
+    });
+    const issued = await this.tokens.issue(reader.id);
+    return { ...issued, reader: toView(reader) };
+  }
+
+  isReviewEnabled(): boolean {
+    return this.config.get<string>('IS_APPLE_REVIEW') === 'true';
+  }
+
   async me(readerId: string): Promise<ReaderView> {
     const reader = await this.readers.findById(readerId);
     if (!reader) throw new NotFoundException('그 독자를 찾지 못했어요.');

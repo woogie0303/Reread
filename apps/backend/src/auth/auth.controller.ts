@@ -22,6 +22,7 @@ import {
   OAuthCallbackDto,
   OAuthStartDto,
   RefreshDto,
+  ReviewSignInDto,
   TicketExchangeDto,
 } from './dto/auth.dto';
 import { OAuthSessionService } from './oauth-session.service';
@@ -79,6 +80,19 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentReader() readerId: string) {
     return this.auth.me(readerId);
+  }
+
+  /** App Store 심사용 — IS_APPLE_REVIEW=true 일 때만 동작한다 */
+  @Get('review')
+  reviewMode() {
+    return { enabled: this.auth.isReviewEnabled() };
+  }
+
+  @Throttle({ default: RATE_LIMIT.auth })
+  @Post('review')
+  @HttpCode(200)
+  reviewSignIn(@Body() dto: ReviewSignInDto) {
+    return this.auth.reviewSignIn(dto.username, dto.password);
   }
 
   @Throttle({ default: RATE_LIMIT.auth })

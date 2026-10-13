@@ -248,6 +248,27 @@ async function browserSignIn(
   });
 }
 
+/** App Store 심사용 — 서버에서 IS_APPLE_REVIEW=true 일 때만 동작한다 */
+export async function reviewSignIn(username: string, password: string): Promise<SignInResult> {
+  return api<SignInResult>('/auth/review', {
+    method: 'POST',
+    anonymous: true,
+    body: { username, password },
+  });
+}
+
+export async function isReviewModeEnabled(): Promise<boolean> {
+  try {
+    const res = await api<{ enabled: boolean }>('/auth/review', {
+      method: 'GET',
+      anonymous: true,
+    });
+    return res.enabled;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * 웹(Expo Web)에서 동의 화면이 팝업으로 뜰 때, 로그인이 끝난 뒤 그 창이
  * 스스로 닫히게 한다. 네이티브에서는 아무 일도 하지 않는다 — 모듈 최상단에서
