@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
-import { reportError } from '@/shared/monitoring/measure';
+import { reportError } from '@/shared/monitoring/sentry';
 import type { ApiAsk, ApiAskView, ApiQuota } from '@/shared/api/types';
 
 export const asksKey = ['asks'] as const;

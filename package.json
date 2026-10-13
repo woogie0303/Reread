@@ -22,8 +22,7 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "expo-modules-jsi": "patches/expo-modules-jsi.patch",
-      "@measuresh/react-native@0.4.1": "patches/@measuresh__react-native@0.4.1.patch"
+      "expo-modules-jsi": "patches/expo-modules-jsi.patch"
     }
   }
 }

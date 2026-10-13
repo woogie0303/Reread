@@ -10,7 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { color } from '@/shared/config';
 import { configureNotifications } from '@/shared/notifications/reminder';
 import { QueryProvider } from '@/shared/query/provider';
-import { initMonitoring } from '@/shared/monitoring/measure';
+import { initMonitoring, wrapRoot } from '@/shared/monitoring/sentry';
 import { SessionProvider, useSession } from '@/shared/session/session';
 import { ToastHost } from '@/shared/ui';
 import { OnboardingRedirect } from '@/widgets/onboarding/model/onboarding-redirect';
@@ -23,7 +23,7 @@ configureNotifications();
  * Reread는 흰 종이 위에서만 산다 — 화면은 라이트 하나뿐이다.
  * (디자인의 여섯 화면 모두 종이 바탕 위 잉크·포인트 색의 대비를 쓴다.)
  */
-export default function RootLayout() {
+function RootLayout() {
   return (
     /* 촬영 시트의 손잡이가 끌기를 받는다(`widgets/capture/ui/ask-sheet`) */
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -38,6 +38,8 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);
 
 /**
  * 로그인 여부에 따라 문을 갈라놓는다.

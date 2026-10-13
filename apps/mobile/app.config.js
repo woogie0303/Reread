@@ -26,8 +26,8 @@ if (['production', 'testflight'].includes(process.env.EAS_BUILD_PROFILE)) {
   const missing = [
     ['EXPO_PUBLIC_API_URL', '서버 주소 (eas.json의 production env)'],
     [
-      'MEASURE_IOS_API_KEY',
-      '오류 수집 키 (EAS 환경 변수 — 없으면 충돌이 어디에도 남지 않는다)',
+      'EXPO_PUBLIC_SENTRY_DSN',
+      '오류 수집 주소 (EAS 환경 변수 — 없으면 충돌이 어디에도 남지 않는다)',
     ],
     [
       'EXPO_PUBLIC_ADMOB_IOS_APP_ID',
@@ -100,26 +100,6 @@ module.exports = ({ config }) => {
        * 서버 푸시를 붙이는 날 이 줄을 지우고 플러그인을 켠다.
        */
       createRunOncePlugin((c) => c, 'expo-notifications'),
-      /**
-       * 오류·성능 수집(Measure). 이 플러그인이 iOS의 AppDelegate에서 SDK를 켜고, 출시 빌드가
-       * 끝날 때마다 심볼 파일을 올려서 충돌 보고서의 줄 번호를 읽을 수 있게 한다. 키는
-       * 환경 변수 `MEASURE_IOS_API_KEY`에서만 온다(로컬은 `.env`, EAS는 환경 변수) — 소스에
-       * 적어 두지 않는다. 키가 없는 빌드(개발 빌드 등)는 Measure 없이 지어진다. 출시 빌드는
-       * 위 검사가 키가 없으면 빌드 전에 막는다. JS 쪽 시작은 `shared/monitoring/measure.ts`.
-       */
-      ...(process.env.MEASURE_IOS_API_KEY
-        ? [
-            [
-              '@measuresh/react-native',
-              {
-                iosApiKey: process.env.MEASURE_IOS_API_KEY,
-                iosApiUrl:
-                  process.env.MEASURE_IOS_API_URL ??
-                  'https://ingest.measure.sh',
-              },
-            ],
-          ]
-        : []),
       [
         'react-native-google-mobile-ads',
         {

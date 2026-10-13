@@ -241,14 +241,18 @@ Apple 로그인 권한(`com.apple.developer.applesignin`)은 늘 들어간다 �
 - **`fetch`의 영어 오류('Network request failed')는 앱에 그대로 보이지 않는다.** `api()`가
   `NetworkError`로 바꿔 한국어로 말한다. 서버의 검증 메시지도 한국어다
   (`apps/backend/src/common/validation.ts`).
-- **오류 수집은 Measure**(measure.sh, `shared/monitoring/measure.ts`). 충돌과 화면 흐름이 대시보드에
-  모인다. 네이티브 쪽은 `app.config.js`의 `@measuresh/react-native` 플러그인이 켜고(출시 빌드가
-  끝날 때 심볼 파일도 올린다) 키는 환경 변수 `MEASURE_IOS_API_KEY`에서만 온다 — 로컬은 `.env`, EAS는
-  `eas env:create`. 키가 없으면 개발 빌드는 Measure 없이 지어지고, 출시 빌드는 빌드 전에 막힌다. JS 쪽은 `initMonitoring()`이 시작한다. **개발 빌드에서는 켜지
+- **오류 수집은 Sentry**(`shared/monitoring/sentry.ts`). 충돌과 잡아서 보낸 오류가 대시보드에 모인다.
+  네이티브 쪽은 `app.json`의 `@sentry/react-native/expo` 플러그인이 켜고(출시 빌드가 끝날 때 소스맵·심볼도
+  올린다), JS 쪽은 `initMonitoring()`이 시작하고 루트 레이아웃을 `wrapRoot`로 감싼다. **DSN은
+  `EXPO_PUBLIC_SENTRY_DSN`**(비밀이 아니라 보낼 주소 — `EXPO_PUBLIC_` 값만 앱 코드에 들어온다), 업로드
+  토큰 `SENTRY_AUTH_TOKEN`은 빌드에만 쓰이고 앱에는 들어가지 않는다. 로컬은 `.env`, EAS는
+  `eas env:create`(토큰은 비밀로). DSN이 없으면 출시 빌드는 빌드 전에 막힌다. **개발 빌드에서는 켜지
   않는다**(`__DEV__`) — 개발 세션이 독자 통계에 섞이지 않게. 잡아서 처리한 오류(묻기 실패 등)도
-  `reportError`로 남긴다 — 화면이 경고 창만 띄우고 넘어가면 원인이 어디에도 남지 않는다. 네이티브
-  모듈이라 넣은 뒤에는 `prebuild --clean`과 빌드를 다시 해야 한다. **개인정보 처리방침에 오류 수집(기기·
-  오류 정보)과 수집 업체(Measure)를 적어 둘 것.** Sentry는 걷어냈다.
+  `reportError`로 남긴다 — 화면이 경고 창만 띄우고 넘어가면 원인이 어디에도 남지 않는다.
+  **`sendDefaultPii`·세션 리플레이·사용자 피드백·로그는 켜지 않는다** — 옮겨 적은 문장과 내 생각이 화면의
+  중심이라 화면과 글이 업체로 나가면 안 된다. 네이티브 모듈이라 넣은 뒤에는 `prebuild --clean`과 빌드를
+  다시 해야 한다. **개인정보 처리방침에 오류 수집(기기·오류 정보)과 수집 업체(Sentry)를 적어 둘 것.**
+  한때 Measure를 썼다가 Sentry로 옮겼다.
 
 ## 로그인 화면
 
