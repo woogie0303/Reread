@@ -10,7 +10,13 @@ import { useBook, useCurrentBook } from '@/entities/book/api/book.api';
 import { useUpdateProgress } from '@/entities/reading/api/reading.api';
 import { useCreateSentence } from '@/entities/sentence/api/sentence.api';
 import { color, gutter, ink, type } from '@/shared/config';
-import { pickStillIn } from '@/shared/ocr/selection';
+import {
+  followEdit,
+  limitMessage,
+  MAX_PICKS,
+  MAX_PICK_CHARS,
+  pickStillIn,
+} from '@/shared/ocr/selection';
 import {
   available,
   languagesFor,
@@ -24,6 +30,7 @@ import {
   AskingOverlay,
   HeaderAction,
   ScreenHeader,
+  showToast,
   Tap,
 } from '@/shared/ui';
 import { AskSheet } from '@/widgets/capture/ui/ask-sheet';
@@ -65,6 +72,12 @@ export default function ScanScreen() {
    * 범위가 사라지면 고친 글도 함께 버려진다(아래 `sheet`가 범위로만 찾는다).
    */
   const [edits, setEdits] = useState<Record<string, string>>({});
+  /**
+   * 시트에서 글의 단어를 눌러 고른 표현 — 문장 하나가 이 목록을 갖게 되면 그 문장의 표현은
+   * 사진 위 고르기에서 떨어져 나와 **글자로** 붙든다(고친 글에서 새 단어를 고를 수 있어야 해서).
+   * `edits`처럼 문장의 범위로 붙들고, 범위가 사라지면 함께 버려진다.
+   */
+  const [custom, setCustom] = useState<Record<string, string[]>>({});
   /** 미리 채우지 않는다 — 독자가 직접 적는다 */
   const [pageEdit, setPageEdit] = useState<string>();
 
@@ -105,18 +118,26 @@ export default function ScanScreen() {
       picks.groups.map((group) => {
         const key = `${group.from}-${group.to}`;
         const text = edits[key] ?? group.text;
+        const typed = custom[key];
         return {
           key,
           text,
-          picks: group.picks.map((pick) => ({
-            surface: pick.surface,
-            from: pick.from,
-            to: pick.to,
-            missing: !pickStillIn(text, pick.surface),
-          })),
+          picks: typed
+            ? typed.map((surface) => ({
+                surface,
+                from: -1,
+                to: -1,
+                missing: !pickStillIn(text, surface),
+              }))
+            : group.picks.map((pick) => ({
+                surface: pick.surface,
+                from: pick.from,
+                to: pick.to,
+                missing: !pickStillIn(text, pick.surface),
+              })),
         };
       }),
-    [picks.groups, edits],
+    [picks.groups, edits, custom],
   );
   const pickCount = sheet.reduce((sum, s) => sum + s.picks.length, 0);
 
@@ -162,13 +183,71 @@ export default function ScanScreen() {
     setWords([]);
     picks.clear();
     setEdits({});
+    setCustom({});
     setSheetOpen(false);
   };
 
-  /** 칩에서 표현을 빼면 사진 위의 고르기도 풀린다. 다 빠지면 시트도 닫힌다. */
-  const removePick = (from: number, to: number) => {
-    picks.unpick(from, to);
+  /**
+   * 칩에서 표현을 빼면 사진 위의 고르기도 풀린다. 한 문장의 표현이 다 빠지면 그 문장은 알아서
+   * 빠지고, 문장이 다 빠지면 시트도 닫힌다.
+   */
+  const removePick = (key: string, pick: SheetSentence['picks'][number]) => {
+    if (pick.from < 0) {
+      const rest = (custom[key] ?? []).filter((s) => s !== pick.surface);
+      if (rest.length) {
+        setCustom((prev) => ({ ...prev, [key]: rest }));
+        return;
+      }
+      /** 모르는 단어가 하나도 없는 문장은 물을 까닭이 없다 — 알아서 뺀다 */
+      const group = picks.groups.find((g) => `${g.from}-${g.to}` === key);
+      if (group) picks.unpick(group.from, group.to);
+      setCustom(({ [key]: _gone, ...left }) => left);
+      setEdits(({ [key]: _gone, ...left }) => left);
+      if (sheet.length <= 1) setSheetOpen(false);
+      return;
+    }
+    picks.unpick(pick.from, pick.to);
     if (pickCount <= 1) setSheetOpen(false);
+  };
+
+  /**
+   * 글을 고친다. 고르던 글자가 고친 글의 더 큰 단어 안에 들어갔으면(`pa` → `patronizing`)
+   * 그 표현이 단어를 따라간다 — 이때부터는 사진에 매이지 않고 글자로 붙든다.
+   */
+  const changeText = (key: string, next: string) => {
+    const now = sheet.find((s) => s.key === key);
+    setEdits((prev) => ({ ...prev, [key]: next }));
+    if (!now) return;
+    const surfaces = now.picks.map((pick) => pick.surface);
+    const followed = followEdit(now.text, next, surfaces);
+    if (followed.some((surface, i) => surface !== surfaces[i]))
+      setCustom((prev) => ({ ...prev, [key]: followed }));
+  };
+
+  /** 글의 단어를 눌렀다 — 새 표현으로 더하고, 이미 고른 단어면 그 표현을 뺀다 */
+  const togglePick = (key: string, surface: string) => {
+    const now = sheet.find((s) => s.key === key);
+    if (!now) return;
+    const surfaces = now.picks.map((pick) => pick.surface);
+    /**
+     * 이 문장에서 이미 고른 글자를 또 누르면 막는다 — 같은 단어가 문장에 두 번 나오는 경우다.
+     * (이미 고른 쪽의 글자를 누르면 그 표현을 푸는 것이라 여기까지 오지 않는다.)
+     */
+    if (
+      surfaces.some((picked) => picked.toLowerCase() === surface.toLowerCase())
+    ) {
+      showToast(limitMessage('duplicate'));
+      return;
+    }
+    if (surfaces.length >= MAX_PICKS) {
+      showToast(limitMessage('picks'));
+      return;
+    }
+    if (surface.length > MAX_PICK_CHARS) {
+      showToast(limitMessage('long'));
+      return;
+    }
+    setCustom((prev) => ({ ...prev, [key]: [...surfaces, surface] }));
   };
 
   const ask = async () => {
@@ -350,9 +429,8 @@ export default function ScanScreen() {
       {sheetOpen && sheet.length ? (
         <AskSheet
           sentences={sheet}
-          onChangeText={(key, next) =>
-            setEdits((prev) => ({ ...prev, [key]: next }))
-          }
+          onChangeText={changeText}
+          onTogglePick={togglePick}
           onRemovePick={removePick}
           page={pageText}
           onChangePage={setPageEdit}

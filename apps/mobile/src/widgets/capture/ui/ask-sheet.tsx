@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   LayoutAnimation,
@@ -72,8 +72,8 @@ function useKeyboardHeight() {
  * **물을지, 그냥 마음에 든 문장으로 둘지**만 고른다 — 고른 뒤 그 문장들이 사는 곳으로
  * 옮기는 일은 부르는 쪽(`app/scan.tsx`)이 한다.
  *
- * - **문장마다 카드 하나**(`AskSentence`). 누르면 바로 고치는 칸이 되고, 아래에
- *   고른 표현이 칩으로 선다.
+ * - **문장마다 카드 하나**(`AskSentence`). 글의 단어를 눌러 고르고, '글자 고치기'로
+ *   틀린 글자를 고친다. 아래에 고른 표현이 칩으로 선다.
  * - **여러 문장을 한 번에 묻고, 이번 달 질문은 한 번만 쓴다.** 그래서 버튼 위에
  *   '질문 1번'을 미리 말한다.
  * - **쪽수는 하나.** 사진 한 장이 한 쪽이다. 꼭, 그 책 안에서 — 나중에 이 문장을
@@ -87,6 +87,7 @@ function useKeyboardHeight() {
 export function AskSheet({
   sentences,
   onChangeText,
+  onTogglePick,
   onRemovePick,
   page,
   onChangePage,
@@ -100,7 +101,9 @@ export function AskSheet({
 }: {
   sentences: SheetSentence[];
   onChangeText: (key: string, next: string) => void;
-  onRemovePick: (from: number, to: number) => void;
+  /** 글의 단어를 눌러 고르거나 푼다 */
+  onTogglePick: (key: string, surface: string) => void;
+  onRemovePick: (key: string, pick: SheetSentence['picks'][number]) => void;
   /** 숫자만 */
   page: string;
   onChangePage: (next: string) => void;
@@ -117,6 +120,16 @@ export function AskSheet({
   const { height: screen } = useWindowDimensions();
   const keyboard = useKeyboardHeight();
   const raised = keyboard > 0;
+  /**
+   * 글을 고치는 중에는 쪽수와 버튼을 내려 둔다. 자판 위로 따라 올라오면 고치는 칸이 좁아지고,
+   * 쪽수를 적는 때(자판이 같이 올라와도 쪽수 칸이 보여야 하는 때)와 구별되지 않았다.
+   */
+  const [typing, setTyping] = useState(false);
+  const scroll = useRef<ScrollView>(null);
+  /** 쪽수 칸을 누르면 맨 아래로 — 자판이 올라오는 동안을 기다렸다 굴린다 */
+  const scrollToEnd = () => {
+    setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 250);
+  };
 
   const typed = Number(page);
   const tooFar = Boolean(maxPage && typed > maxPage);
@@ -237,6 +250,7 @@ export function AskSheet({
       </GestureDetector>
 
       <ScrollView
+        ref={scroll}
         style={grow ? styles.scrollGrow : styles.scroll}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.body}
@@ -248,77 +262,79 @@ export function AskSheet({
             sentence={sentence}
             index={i}
             onChangeText={(next) => onChangeText(sentence.key, next)}
-            onRemovePick={onRemovePick}
+            onTogglePick={(surface) => onTogglePick(sentence.key, surface)}
+            onRemovePick={(pick) => onRemovePick(sentence.key, pick)}
+            onEditing={setTyping}
           />
         ))}
-      </ScrollView>
-
-      {/*
-        쪽수는 글 목록 밖에 고정한다. 문장이 길어 목록이 길어지면 맨 아래의 쪽수 칸이
-        화면 밖으로 밀려나고, 누르면 자판에 가려져 무엇을 적는지 보이지 않았다.
-      */}
-      <View style={styles.pageArea}>
-        <View style={styles.pageRow}>
-          <PageIcon size={17} color={color.text.meta} />
-          <AppText style={styles.pageLabel}>몇 쪽이에요?</AppText>
-          <View style={[styles.pageBox, tooFar ? styles.pageBoxWarn : null]}>
-            <PageInput
-              value={page}
-              onChangeValue={onChangePage}
-              warn={tooFar}
-            />
-          </View>
-        </View>
-        {/* 버튼이 흐려진 이유는 버튼이 아니라 여기가 말한다 */}
-        {tooFar ? (
-          <AppText style={styles.hint}>이 책은 {maxPage}쪽까지예요.</AppText>
-        ) : null}
-      </View>
-
-      <View style={styles.actions}>
-        {/* 남아 있을 때는 말이 없다. 다 썼을 때만 버튼이 왜 '담아두기'인지 말한다 */}
-        {quotaLeft === 0 && (
-          <AppText style={styles.quota}>
-            이번 달 질문을 다 썼어요. 문장은 담기고 다음 달 1일에 저절로 물어볼
-            수 있어요.
-          </AppText>
-        )}
         {/*
-          한 줄에 둘 — 넓은 쪽이 물어보기, 좁은 쪽(하트)이 '그냥 마음에 든 문장'. 위아래로
-          쌓으면 둘이 같은 무게의 선택처럼 보였고, 시트가 그만큼 높아져 사진을 가렸다.
+          쪽수와 버튼은 글과 함께 흐른다. 한동안 글 밖에 고정했는데 — 문장이 길어 목록 끝의 쪽수 칸이
+          밀려나지 않게 하려던 것이었다 — 스크롤하는 동안에도 늘 떠 있어서 시트가 답답했다. 쪽수 칸을
+          누르면 맨 아래로 굴려 자판 위에 보이게 한다.
         */}
-        <View style={styles.buttons}>
-          {/* 질문을 다 썼으면 묻는 대신 담아두고, 다음 달에 저절로 풀린다(ADR-0003) */}
-          <ActionButton
-            label={
-              quotaLeft > 0
-                ? many
-                  ? `${sentences.length}문장 물어보기`
-                  : '이 문장 물어보기'
-                : many
-                  ? `${sentences.length}문장 담아두기`
-                  : '문장만 담아두기'
-            }
-            variant={quotaLeft > 0 ? 'primary' : 'ink'}
-            loading={asking}
-            disabled={keeping || !askable}
-            onPress={onAsk}
-            style={styles.main}
-          />
-          <ActionButton
-            label={
-              many ? '그냥 마음에 든 문장들이에요' : '그냥 마음에 든 문장이에요'
-            }
-            icon={<HeartIcon size={22} color={color.primary} />}
-            iconOnly
-            variant="subtle"
-            loading={keeping}
-            disabled={asking || !ready}
-            onPress={onKeepOnly}
-            style={styles.side}
-          />
-        </View>
-      </View>
+        {typing ? null : (
+          <>
+            <View style={styles.pageArea}>
+              <View style={styles.pageRow}>
+                <PageIcon size={17} color={color.text.meta} />
+                <AppText style={styles.pageLabel}>몇 쪽이에요?</AppText>
+                <View
+                  style={[styles.pageBox, tooFar ? styles.pageBoxWarn : null]}
+                >
+                  <PageInput
+                    value={page}
+                    onChangeValue={onChangePage}
+                    onFocus={scrollToEnd}
+                    warn={tooFar}
+                  />
+                </View>
+              </View>
+              {/* 버튼이 흐려진 이유는 버튼이 아니라 여기가 말한다 */}
+              {tooFar ? (
+                <AppText style={styles.hint}>
+                  이 책은 {maxPage}쪽까지예요.
+                </AppText>
+              ) : null}
+            </View>
+
+            <View style={styles.actions}>
+              {/*
+            한 줄에 둘 — 넓은 쪽이 물어보기, 좁은 쪽(하트)이 '그냥 마음에 든 문장'. 위아래로
+            쌓으면 둘이 같은 무게의 선택처럼 보였고, 시트가 그만큼 높아져 사진을 가렸다.
+          */}
+              <View style={styles.buttons}>
+                {/* 질문을 다 썼어도 버튼은 그대로 '물어보기'다 — 누르면 담기고 다음 달에 저절로 풀린다(ADR-0003) */}
+                <ActionButton
+                  label={
+                    many
+                      ? `${sentences.length}문장 물어보기`
+                      : '이 문장 물어보기'
+                  }
+                  variant={quotaLeft > 0 ? 'primary' : 'ink'}
+                  loading={asking}
+                  disabled={keeping || !askable}
+                  onPress={onAsk}
+                  style={styles.main}
+                />
+                <ActionButton
+                  label={
+                    many
+                      ? '그냥 마음에 든 문장들이에요'
+                      : '그냥 마음에 든 문장이에요'
+                  }
+                  icon={<HeartIcon size={22} color={color.primary} />}
+                  iconOnly
+                  variant="subtle"
+                  loading={keeping}
+                  disabled={asking || !ready}
+                  onPress={onKeepOnly}
+                  style={styles.side}
+                />
+              </View>
+            </View>
+          </>
+        )}
+      </ScrollView>
     </Animated.View>
   );
 }
@@ -352,7 +368,7 @@ const styles = StyleSheet.create({
   scrollGrow: { flex: 1 },
   body: { paddingHorizontal: gutter, paddingBottom: 6, gap: 12 },
 
-  pageArea: { paddingHorizontal: gutter, gap: 8 },
+  pageArea: { gap: 8 },
   pageRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pageLabel: { flex: 1, ...type.label2, color: color.text.secondary },
   pageBox: {
@@ -366,16 +382,10 @@ const styles = StyleSheet.create({
   pageBoxWarn: { backgroundColor: color.fill.default },
   hint: { ...type.caption1, color: color.status.cautionary, marginTop: -4 },
 
-  actions: { paddingHorizontal: gutter, paddingTop: 4, gap: 8 },
+  actions: { paddingTop: 4, gap: 8 },
   buttons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   /** 넓은 쪽 — 이 시트가 하는 일은 묻는 것이다 */
   main: { flex: 1 },
   /** 좁은 쪽 — 하트 하나. 높이는 옆 버튼과 맞춘다 */
   side: { width: 56, height: 52 },
-  quota: {
-    ...type.caption1,
-    color: color.text.meta,
-    textAlign: 'center',
-    marginBottom: 2,
-  },
 });

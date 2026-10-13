@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { showToast } from '@/shared/ui';
 import {
   groupBySentence,
   indicesOf,
@@ -7,6 +8,7 @@ import {
   rangesOf,
   toggleRange,
   without,
+  limitMessage,
   type Limit,
   type Range,
 } from './selection';
@@ -36,11 +38,23 @@ export function usePicks(words: Word[], { whole = false } = {}) {
   const selected = useMemo(() => indicesOf(ranges), [ranges]);
   const groups = useMemo(() => groupBySentence(words, ranges), [words, ranges]);
 
+  /** 끌다가 같은 말을 매 순간 하지 않게 — 알림은 잠깐 간격을 둔다 */
+  const toastedAt = useRef(0);
+
   /** 통째로 바꾼다 — 끄는 동안 매 순간 이 길로 온다. 받았으면 true. */
   const change = useCallback(
     (next: Range[]) => {
       const tidy = rangesOf(next);
       const reason = overflows(words, tidy, { whole });
+      /** 같은 단어를 또 고른 것은 잠깐만 알린다 — 아무것도 고르지 못한 때에도 보여야 한다 */
+      if (reason === 'duplicate') {
+        const now = Date.now();
+        if (now - toastedAt.current > 1500) {
+          toastedAt.current = now;
+          showToast(limitMessage(reason));
+        }
+        return false;
+      }
       if (reason) {
         setLimit({ reason, at: Date.now() });
         return false;

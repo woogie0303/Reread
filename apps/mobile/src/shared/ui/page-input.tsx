@@ -25,6 +25,7 @@ export function PageInput({
   value,
   onChangeValue,
   warn,
+  onFocus,
   style,
 }: {
   /** 숫자만 */
@@ -32,12 +33,14 @@ export function PageInput({
   onChangeValue: (digits: string) => void;
   /** 책에 없는 쪽이면 주의 색으로 */
   warn?: boolean;
+  onFocus?: () => void;
   style?: StyleProp<TextStyle>;
 }) {
   return (
     <TextInput
       value={`${PREFIX}${value}`}
       onChangeText={(next) => onChangeValue(next.replace(/[^0-9]/g, ''))}
+      onFocus={onFocus}
       keyboardType="number-pad"
       maxLength={PREFIX.length + 5}
       selectTextOnFocus={Boolean(value)}

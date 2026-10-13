@@ -28,6 +28,7 @@ import {
   AskingOverlay,
   HeartIcon,
   ScreenHeader,
+  ToastHost,
 } from '@/shared/ui';
 import { SentenceField } from '@/widgets/ask/ui/sentence-field';
 import { WordPicker } from '@/widgets/ask/ui/word-picker';
@@ -285,6 +286,8 @@ export default function AskScreen() {
       </View>
 
       <AskingOverlay visible={createAsk.isPending} />
+      {/* 이 화면은 네이티브 모달이라 맨 위 레이아웃의 알림이 가려진다 — 제 알림 자리를 둔다 */}
+      <ToastHost />
     </KeyboardAvoidingView>
   );
 }

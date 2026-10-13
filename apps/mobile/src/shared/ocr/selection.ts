@@ -187,8 +187,11 @@ export function groupBySentence(
     .filter((group) => group.picks.length);
 }
 
-/** 막힌 이유 — 문장이 너무 많거나, 표현이 너무 많거나, 한 표현이 너무 길다 */
-export type Limit = 'sentences' | 'picks' | 'long';
+/**
+ * 막힌 이유 — 문장이 너무 많거나, 표현이 너무 많거나, 한 표현이 너무 길거나, 같은 문장에서
+ * 같은 단어를 또 골랐다(밑줄이 어느 쪽인지 가를 수 없다).
+ */
+export type Limit = 'sentences' | 'picks' | 'long' | 'duplicate';
 
 /** 막힌 이유를 독자에게 한국어로 */
 export function limitMessage(reason: Limit): string {
@@ -199,6 +202,8 @@ export function limitMessage(reason: Limit): string {
       return `한 문장에서 표현은 ${MAX_PICKS}개까지 고를 수 있어요`;
     case 'long':
       return `표현은 ${MAX_PICK_CHARS}자까지만 고를 수 있어요. 구만 골라 주세요`;
+    case 'duplicate':
+      return '이미 선택된 표현이에요';
   }
 }
 
@@ -219,12 +224,52 @@ export function overflows(
     )
   )
     return 'long';
-  if (whole) return runs.length > MAX_PICKS ? 'picks' : null;
+  if (whole) {
+    if (hasRepeat(runs.map((run) => surfaceOf(words, run.from, run.to))))
+      return 'duplicate';
+    return runs.length > MAX_PICKS ? 'picks' : null;
+  }
 
   const groups = groupBySentence(words, selected);
+  if (groups.some((group) => hasRepeat(group.picks.map((p) => p.surface))))
+    return 'duplicate';
   if (groups.length > maxSentences) return 'sentences';
   if (groups.some((group) => group.picks.length > MAX_PICKS)) return 'picks';
   return null;
+}
+
+/**
+ * 같은 글자의 표현이 둘 이상인가. 한 문장에서 같은 단어를 두 번 고르지 못한다 — 줄은 처음
+ * 나온 자리에만 그어져서, 둘째를 골라도 첫째에 밑줄이 서고 칩만 둘이 된다.
+ */
+export function hasRepeat(surfaces: string[]): boolean {
+  const seen = new Set<string>();
+  for (const surface of surfaces) {
+    const key = surface.toLowerCase();
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
+}
+
+/**
+ * 고친 문장에서 고른 표현이 선 자리. **온전한 단어로** 있어야 한다 — 'pa'를 골랐는데
+ * 글을 'patronizing'으로 고쳤으면 'pa'는 더 이상 문장에 없는 표현이다. 부분 문자열로
+ * 찾으면 사라진 표현을 있다고 보고, 줄을 엉뚱한 글자에 긋는다.
+ */
+export function locate(
+  sentence: string,
+  surface: string,
+): { from: number; to: number } | null {
+  if (!surface) return null;
+  const escaped = surface.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hit = new RegExp(
+    `(^|[^\\p{L}\\p{N}])(${escaped})(?![\\p{L}\\p{N}])`,
+    'iu',
+  ).exec(sentence);
+  if (!hit) return null;
+  const from = hit.index + hit[1].length;
+  return { from, to: from + hit[2].length };
 }
 
 /**
@@ -232,5 +277,58 @@ export function overflows(
  * 지웠을 수 있다 — 없는 것을 물으면 모델이 문장 밖의 뜻을 지어낸다.
  */
 export function pickStillIn(sentence: string, surface: string): boolean {
-  return sentence.toLowerCase().includes(surface.toLowerCase());
+  return locate(sentence, surface) !== null;
+}
+
+/** 단어 하나 — 사이의 apostrophe·하이픈은 단어 안이다(`don't`, `well-known`) */
+export const WORD = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
+
+/**
+ * 글을 고쳤을 때 고른 표현이 **고친 글자를 따라가게** 한다. 글자 인식이 단어를 쪼갰을 때
+ * (`pa` + `tronizing`) 독자가 글을 `patronizing`으로 고치면, 고른 `pa`는 그 단어의 일부가
+ * 되었을 뿐 같은 표현이다 — 막지 않고 단어 전체로 넓힌다.
+ *
+ * 고친 자리는 앞뒤로 같은 글자를 빼고 남은 구간이다. 고르던 글자가 그대로 남았고(앞뒤에
+ * 글자만 붙었고) 그것이 더 큰 단어 안에 들어 있을 때만 따라간다. 글자 자체를 지웠거나 다른
+ * 글자로 바꾼 표현은 그대로 둔다 — 문장에서 사라졌다고 알려야 한다.
+ */
+export function followEdit(
+  before: string,
+  after: string,
+  surfaces: string[],
+): string[] {
+  if (before === after) return surfaces;
+
+  let pre = 0;
+  const max = Math.min(before.length, after.length);
+  while (pre < max && before[pre] === after[pre]) pre += 1;
+  let suf = 0;
+  while (
+    suf < max - pre &&
+    before[before.length - 1 - suf] === after[after.length - 1 - suf]
+  )
+    suf += 1;
+  const delta = after.length - before.length;
+  const oldEnd = before.length - suf;
+
+  const tokens = [...after.matchAll(WORD)].map((m) => ({
+    from: m.index ?? 0,
+    to: (m.index ?? 0) + m[0].length,
+    text: m[0],
+  }));
+
+  return surfaces.map((surface) => {
+    const was = locate(before, surface);
+    if (!was || locate(after, surface)) return surface;
+
+    const from = was.from >= oldEnd ? was.from + delta : was.from;
+    const to = was.to <= pre ? was.to : was.to + delta;
+    if (after.slice(from, to).toLowerCase() !== surface.toLowerCase())
+      return surface;
+
+    const word = tokens.find((t) => t.from <= from && to <= t.to);
+    return word && word.text.toLowerCase() !== surface.toLowerCase()
+      ? word.text
+      : surface;
+  });
 }
