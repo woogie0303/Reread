@@ -30,7 +30,9 @@ export function matchAnswer(
   asked: AskedSentence[],
   answer: Answer,
 ): (MatchedAnswer | null)[] {
-  return asked.map((sentence, i) => {
+  /** 글자는 남기지 않고 개수만 센다 — 독자의 글이 로그에 남지 않게 */
+  const count = { total: 0, empty: 0, kept: 0, dropped: 0 };
+  const matched = asked.map((sentence, i) => {
     const got = answer.sentences[i];
     /** 이미 번역이 있는 문장은 모델이 번역을 비워 와도 그 번역을 그대로 쓴다 */
     const translation =
@@ -46,8 +48,10 @@ export function matchAnswer(
       if (!hit?.term.trim() || !hit.meaning.trim()) return null;
       /** 번역에 없는 글자는 버린다 — 줄을 그을 자리를 찾지 못하는 값이 남아 있으면 안 된다 */
       const span = hit.translationSpan?.trim();
-      if (span && !translation.includes(span))
-        log.warn(`번역에 없는 translationSpan을 버립니다: ${span}`);
+      count.total += 1;
+      if (!span) count.empty += 1;
+      else if (translation.includes(span)) count.kept += 1;
+      else count.dropped += 1;
       picks.push({
         surface,
         term: hit.term.trim(),
@@ -58,4 +62,8 @@ export function matchAnswer(
 
     return { translation, picks };
   });
+  log.log(
+    `translationSpan: 표현 ${count.total}개 중 남김 ${count.kept}, 빈 값 ${count.empty}, 번역에 없어 버림 ${count.dropped}`,
+  );
+  return matched;
 }
