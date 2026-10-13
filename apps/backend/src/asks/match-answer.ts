@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { AskedSentence } from './model/ask-model';
 import type { Answer } from './model/prompt';
 
@@ -12,6 +13,8 @@ export type MatchedAnswer = {
     translationSpan?: string;
   }[];
 };
+
+const log = new Logger('matchAnswer');
 
 const loose = (text: string) => text.trim().toLowerCase();
 
@@ -43,6 +46,8 @@ export function matchAnswer(
       if (!hit?.term.trim() || !hit.meaning.trim()) return null;
       /** 번역에 없는 글자는 버린다 — 줄을 그을 자리를 찾지 못하는 값이 남아 있으면 안 된다 */
       const span = hit.translationSpan?.trim();
+      if (span && !translation.includes(span))
+        log.warn(`번역에 없는 translationSpan을 버립니다: ${span}`);
       picks.push({
         surface,
         term: hit.term.trim(),

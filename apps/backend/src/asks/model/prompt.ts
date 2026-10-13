@@ -46,9 +46,10 @@ export const AnswerFormat = z.object({
                 .describe(
                   '이 문장에서의 뜻 하나를 한국어 한 줄로. 사전에 실리는 꼴로 쓴다(동사는 ~다, 과거형 금지). 한글로만 쓰고 한자·일본어·영어를 섞지 않는다. 사전 뜻을 나열하지 않는다.',
                 ),
+              /** 기본값이 있으면 JSON 스키마에서는 필수가 되어 모델이 건너뛰지 못하고, 그래도 빠뜨린 답은 빈 문자열로 읽어 답 전체를 버리지 않는다 */
               translationSpan: z
                 .string()
-                .optional()
+                .default('')
                 .describe(
                   '문장의 한국어 번역에서 이 표현에 해당하는 부분을, 번역에 적힌 글자 그대로 잘라 적는다(고치거나 어미를 바꾸지 않는다). ' +
                     '번역에서 짚을 수 없으면(의역으로 녹아 사라졌거나 번역이 없음) 빈 문자열.',
@@ -61,7 +62,8 @@ export const AnswerFormat = z.object({
     .describe('받은 문장마다 하나씩, 받은 순서대로.'),
 });
 
-export type Answer = z.infer<typeof AnswerFormat>;
+/** 모델이 translationSpan을 빠뜨린 답도 받아들이므로 입력 쪽 꼴이다 */
+export type Answer = z.input<typeof AnswerFormat>;
 
 /**
  * 프롬프트의 붙박이 부분. 요청마다 달라지는 것(책·문장)은 여기 넣지 않는다 —

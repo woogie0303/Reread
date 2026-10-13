@@ -24,6 +24,7 @@ const answer = {
           surface: 'brushed it off',
           term: 'brush it off',
           meaning: '대수롭지 않게 넘기다',
+          translationSpan: '',
         },
       ],
     },
