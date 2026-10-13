@@ -18,7 +18,8 @@ import { ReunionPreview } from './previews';
 type Slide = {
   title: string;
   body: string;
-  preview: ReactElement;
+  /** 움직이는 그림은 자기 쪽이 보일 때(`active`)만 돈다 — 쪽이 한꺼번에 그려져서 */
+  preview: (active: boolean) => ReactElement;
 };
 
 /**
@@ -33,17 +34,17 @@ const SLIDES: Slide[] = [
   {
     title: '읽던 쪽을 찍고\n막힌 문장을 짚어요',
     body: '사진 위에서 모르는 단어를 누르고, 여러 단어로 된 표현은 손가락으로 끌어서 골라요. 사진은 기기 밖으로 나가지 않아요.',
-    preview: <PickDemo />,
+    preview: () => <PickDemo />,
   },
   {
     title: '단어가 아니라\n문장으로 물어요',
     body: '그 문장 안에서의 뜻만 알려드려요. 뜻은 눌러야 열리니, 먼저 스스로 읽어 볼 수 있어요.',
-    preview: <AskPreview />,
+    preview: (active) => <AskPreview active={active} />,
   },
   {
     title: '다시 만나면\n이어드려요',
     body: '예전에 헷갈린 표현을 다른 책에서 또 만나면, 처음 만난 문장과 나란히 보여드려요. 단어장이 아니라, 내가 어디서 헷갈렸는지 기억하는 앱이에요.',
-    preview: <ReunionPreview />,
+    preview: () => <ReunionPreview />,
   },
 ];
 
@@ -96,13 +97,13 @@ export function Onboarding({ onFinish }: { onFinish: () => void }) {
         onMomentumScrollEnd={settle}
         style={styles.pager}
       >
-        {SLIDES.map((slide) => (
+        {SLIDES.map((slide, i) => (
           <View key={slide.title} style={[styles.page, { width }]}>
             <View
               style={styles.preview}
               importantForAccessibility="no-hide-descendants"
             >
-              {slide.preview}
+              {slide.preview(i === index)}
             </View>
             <View style={styles.copy}>
               <AppText style={styles.title}>{slide.title}</AppText>

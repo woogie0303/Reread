@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   interpolate,
   useAnimatedStyle,
@@ -42,7 +43,7 @@ const FINGER = 30;
 
 type Box = { x: number; y: number; width: number; height: number };
 
-export function AskPreview() {
+export function AskPreview({ active = true }: { active?: boolean }) {
   const reduce = useReducedMotion();
   const [button, setButton] = useState<Box>();
   const t = useSharedValue(0);
@@ -53,12 +54,15 @@ export function AskPreview() {
       t.value = T.openDone + 200;
       return;
     }
+    /** 이 쪽이 보이지 않는 동안은 멈춰 닫아 둔다 — 넘어왔을 때 손가락이 처음부터 올라오게 */
+    cancelAnimation(t);
     t.value = 0;
+    if (!active) return;
     t.value = withRepeat(
       withTiming(CYCLE, { duration: CYCLE, easing: Easing.linear }),
       -1,
     );
-  }, [reduce, t]);
+  }, [active, reduce, t]);
 
   const onButtonLayout = (e: LayoutChangeEvent) =>
     setButton(e.nativeEvent.layout);
