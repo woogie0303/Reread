@@ -1,14 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { color, type } from '@/shared/config';
-import {
-  AltPanel,
-  AppText,
-  Card,
-  Icon,
-  Quote,
-  emphasis,
-} from '@/shared/ui';
+import { AppText, Card, Icon, Quote, emphasis } from '@/shared/ui';
 
 /**
  * 안내 화면의 그림 셋 — 실제 화면을 사진으로 박지 않고 **앱이 쓰는 조각 그대로** 조립한다.
@@ -21,33 +14,6 @@ import {
 /*
  * 1번(찍은 쪽 위에서 단어를 고른다)은 손짓을 움직여 보여야 해서 `pick-demo.tsx`에 따로 있다.
  */
-
-/** 2. 문장째로 묻고, 뜻은 눌러야 열린다 */
-export function AskPreview() {
-  return (
-    <View style={styles.stack}>
-      <Card style={styles.card}>
-        <Quote style={styles.sentence}>
-          {'I was puzzling to '}
-          <Quote style={styles.marked}>make out</Quote>
-          {' the subject of a picture on the wall.'}
-        </Quote>
-      </Card>
-      <AltPanel style={styles.meaning}>
-        <View style={styles.reveal}>
-          <AppText style={styles.revealLabel}>뜻 닫기</AppText>
-        </View>
-        <AppText style={styles.meaningText}>
-          나는 벽에 걸린 그림이 무엇을 그린 것인지 알아내려 끙끙대고 있었다.
-        </AppText>
-        <AppText style={styles.term}>
-          <Quote style={styles.termQuote}>make out</Quote>
-          {'  알아보다, 분간하다'}
-        </AppText>
-      </AltPanel>
-    </View>
-  );
-}
 
 /** 3. 다른 책에서 다시 만나면 처음 만난 때와 이어준다 */
 export function ReunionPreview() {
@@ -76,34 +42,6 @@ export function ReunionPreview() {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 14 },
-
-  card: { padding: 18 },
-  sentence: { fontSize: 17, lineHeight: 27 },
-  /** 담은 표현의 밑줄(`sentence-detail`의 marked와 같다) */
-  marked: {
-    color: color.primary,
-    textDecorationLine: 'underline',
-    textDecorationColor: color.primaryLine,
-  },
-
-  meaning: { padding: 16, gap: 10 },
-  reveal: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: color.fill.default,
-  },
-  revealLabel: {
-    ...type.label2,
-    fontWeight: '600',
-    color: color.text.secondary,
-  },
-  meaningText: { ...type.body2, lineHeight: 23, color: color.text.body },
-  term: { ...type.label1, color: color.text.secondary },
-  termQuote: { fontSize: 15, color: color.text.primary },
-
   reunion: { padding: 22, gap: 12 },
   reunionTerm: {
     fontSize: 26,

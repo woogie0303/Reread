@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, gutter, type } from '@/shared/config';
 import { ActionButton, AppText, Tap } from '@/shared/ui';
 import { PickDemo } from './pick-demo';
-import { AskPreview, ReunionPreview } from './previews';
+import { AskPreview } from './ask-demo';
+import { ReunionPreview } from './previews';
 
 type Slide = {
   title: string;
