@@ -219,8 +219,15 @@ DELETE /api/items/:id
 - **검증 메시지는 한국어다.** DTO에 한국어 `message`를 달고, 달지 않은 것은 `validationException`이
   일반 문장으로 바꾼다(원문은 로그에). 영어 기본 메시지가 앱에 그대로 보이지 않게 — 새 DTO를
   만들 때 `message`를 단다.
-- **서버에는 오류 수집 서비스가 없다.** 앱은 Measure를 쓰지만(`apps/mobile/AGENTS.md`) Measure는 모바일
-  전용이라 서버의 오류는 Render 로그로만 본다. 모델 오류는 각 모델 파일의 `unavailable()`이 로그에 남긴다(토큰은 남기지 않는다).
+- **서버 오류는 Sentry로 모인다**(`src/instrument.ts`, `main.ts` 맨 위에서 가져온다). 운영(`NODE_ENV=production`)에
+  `SENTRY_DSN`이 있을 때만 켜지고, 처리되지 않은 5xx는 `SentryGlobalFilter`가 보낸다. 앱의 Sentry는
+  다른 프로젝트다(`apps/mobile/AGENTS.md`). **독자의 글이 나가면 안 된다** — SDK 11의 `dataCollection`
+  기본값은 거의 전부 수집이라 사용자·쿠키·헤더·요청 본문·스택의 지역 변수·DB 바인딩 값을 모두 껐다.
+  새 보고를 더할 때도 문장·프롬프트·오류 메시지를 싣지 않는다.
+- **모델이 답하지 못한 일은 오류가 아니라 상태(`pending`)라서 따로 보낸다**(`asks/model/report.ts`).
+  각 모델 파일의 `unavailable()`이 분류(`timeout`·`rate_limit`·`auth`·`bad_format`·`not_configured`·
+  `http_error`·`unavailable`)와 모델 이름·HTTP 상태만 Sentry에 보내고, 자세한 원문은 지금처럼 Render 로그에
+  남는다. 같은 분류는 한 이슈로 묶여 횟수로 쌓인다. 앱 쪽에서는 이 일이 보이지 않는다.
 
 ## 아직 없는 것
 

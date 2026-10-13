@@ -8,6 +8,7 @@ import {
   type AskResult,
 } from './ask-model';
 import { AnswerFormat, SYSTEM, userPrompt, type Answer } from './prompt';
+import { reportModelFailure, type ModelFailure } from './report';
 
 export const CLOUDFLARE_DEFAULT_MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
@@ -133,7 +134,10 @@ export class CloudflareModel implements AskModel {
   }
 
   async answer(input: AskInput): Promise<AskResult> {
-    if (!this.ready) throw new ModelUnavailable('AI가 설정되지 않았습니다.');
+    if (!this.ready) {
+      reportModelFailure('cloudflare', this.modelName, 'not_configured');
+      throw new ModelUnavailable('AI가 설정되지 않았습니다.');
+    }
 
     const started = Date.now();
     try {
@@ -214,6 +218,12 @@ export class CloudflareModel implements AskModel {
   /** 던져진 것을 갈라 로그로 남기고, 부른 쪽에는 한 가지 사실만 넘긴다. 토큰은 남기지 않는다. */
   private unavailable(error: unknown): ModelUnavailable {
     if (error instanceof ModelUnavailable) return error;
+    reportModelFailure(
+      'cloudflare',
+      this.modelName,
+      failureOf(error),
+      error instanceof HttpError ? error.status : undefined,
+    );
     if (error instanceof HttpError) {
       if (error.status === 429)
         this.log.warn('요청이 몰려 잠시 답할 수 없습니다.');
@@ -252,6 +262,18 @@ async function httpError(response: Response): Promise<HttpError> {
 }
 
 /** JSON이 아니거나 스키마에 안 맞는 답 — 다시 물어볼 만한 실패 */
+/** 던져진 것을 Sentry에 보낼 분류로 옮긴다 */
+function failureOf(error: unknown): ModelFailure {
+  if (error instanceof HttpError) {
+    if (error.status === 429) return 'rate_limit';
+    if (error.status === 401 || error.status === 403) return 'auth';
+    return 'http_error';
+  }
+  if (isShapeError(error)) return 'bad_format';
+  if (error instanceof Error && error.name === 'TimeoutError') return 'timeout';
+  return 'unavailable';
+}
+
 function isShapeError(error: unknown): boolean {
   return (
     error instanceof ShapeError ||

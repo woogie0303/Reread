@@ -9,6 +9,7 @@ import {
   type AskResult,
 } from './ask-model';
 import { AnswerFormat, SYSTEM, userPrompt } from './prompt';
+import { reportModelFailure, type ModelFailure } from './report';
 
 export const ANTHROPIC_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 
@@ -58,9 +59,30 @@ function logUsage(log: Logger, what: string, usage: Usage): void {
   );
 }
 
+function statusOf(error: unknown): number | undefined {
+  if (!(error instanceof Anthropic.APIError)) return undefined;
+  const status: unknown = error.status;
+  return typeof status === 'number' && status ? status : undefined;
+}
+
+/** SDK가 던진 것을 Sentry에 보낼 분류로 옮긴다 */
+function failureOf(error: unknown): ModelFailure {
+  if (error instanceof Anthropic.RateLimitError) return 'rate_limit';
+  if (error instanceof Anthropic.AuthenticationError) return 'auth';
+  if (error instanceof Anthropic.APIConnectionTimeoutError) return 'timeout';
+  if (error instanceof Anthropic.APIError) return 'http_error';
+  return 'unavailable';
+}
+
 /** SDK가 던진 것을 갈라 로그로 남기고, 부른 쪽에는 한 가지 사실만 넘긴다. */
-function unavailable(error: unknown, log: Logger): ModelUnavailable {
+function unavailable(
+  error: unknown,
+  log: Logger,
+  model: string,
+): ModelUnavailable {
   if (error instanceof ModelUnavailable) return error;
+
+  reportModelFailure('anthropic', model, failureOf(error), statusOf(error));
 
   if (error instanceof Anthropic.RateLimitError) {
     log.warn('요청이 몰려 잠시 답할 수 없습니다.');
@@ -115,7 +137,10 @@ export class AnthropicModel implements AskModel {
   }
 
   async answer(input: AskInput): Promise<AskResult> {
-    if (!this.client) throw new ModelUnavailable('AI가 설정되지 않았습니다.');
+    if (!this.client) {
+      reportModelFailure('anthropic', this.modelName, 'not_configured');
+      throw new ModelUnavailable('AI가 설정되지 않았습니다.');
+    }
 
     try {
       const response = await this.client.messages.parse({
@@ -146,7 +171,7 @@ export class AnthropicModel implements AskModel {
         cost: costOf(this.modelName, response.usage, this.log),
       };
     } catch (error) {
-      throw unavailable(error, this.log);
+      throw unavailable(error, this.log, this.modelName);
     }
   }
 }

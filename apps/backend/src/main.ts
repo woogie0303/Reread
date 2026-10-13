@@ -1,3 +1,6 @@
+// 다른 import보다 먼저 — Sentry가 나머지 모듈을 감시하려면 먼저 시작해야 한다
+import './instrument';
+
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
