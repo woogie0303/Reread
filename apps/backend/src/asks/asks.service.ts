@@ -40,6 +40,8 @@ export type AskQuota = {
   remaining: number;
   /** 이 날 0시에 다시 찬다 */
   resetsOn: Date;
+  /** 오늘 광고로 더 받을 수 있는 횟수. 0이면 앱이 광고 버튼을 막는다 */
+  adsLeftToday: number;
 };
 
 /** 질문 하나와, 그 질문이 붙어 있는 문장과 책 */
@@ -265,6 +267,10 @@ export class AsksService {
       reader?.askBonus?.month === monthKey(now)
         ? (reader.askBonus.credit ?? 0)
         : 0;
+    const adsToday =
+      reader?.askBonus?.day === dayKey(now)
+        ? (reader.askBonus.dayCount ?? 0)
+        : 0;
     const budget =
       Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.03) + bonus;
 
@@ -312,6 +318,7 @@ export class AsksService {
       /** 조금이라도 남아 있으면 한 번은 물을 수 있다 — 마지막 한 번은 넘쳐도 받는다 */
       remaining: left > 0 ? Math.max(1, Math.floor(left / typical)) : 0,
       resetsOn: startOfNextMonth(now),
+      adsLeftToday: Math.max(0, this.adsPerDay() - adsToday),
     };
   }
 
@@ -330,7 +337,7 @@ export class AsksService {
      * 기본값은 기본 모델(Gemma, 질문 한 번 ~$0.0002) 기준이다 — 모델을 바꾸면 이 숫자도 다시 잰다.
      */
     const perAd = Number(this.config.get('ASK_AD_BONUS_USD') ?? 0.004);
-    const perDay = Number(this.config.get('ASK_AD_DAILY_LIMIT') ?? 3);
+    const perDay = this.adsPerDay();
 
     const before = await this.quota(readerId);
     if (before.remaining > 0) {
@@ -359,6 +366,11 @@ export class AsksService {
       },
     );
     return this.quota(readerId);
+  }
+
+  /** 하루에 광고로 받을 수 있는 횟수 — 받기 전에 앱이 알 수 있게 한도 응답에도 싣는다 */
+  private adsPerDay(): number {
+    return Number(this.config.get('ASK_AD_DAILY_LIMIT') ?? 3);
   }
 
   /** 질문만 지운다. 옮겨 적은 문장은 남는다 — 답이 필요 없어졌을 뿐이다. */

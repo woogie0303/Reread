@@ -271,3 +271,54 @@ describe('ItemsService.removeEncounters', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
+
+describe('ItemsService.save — 같은 문장에서 다시 담을 때', () => {
+  /** 이미 이 문장에서 만난 표현을 다시 담는 상황만 만든다 */
+  function setup(surface: string) {
+    const target = id();
+    const existing = {
+      _id: id(),
+      encounters: [{ sentenceId: target, surface, savedAt: new Date() }],
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const items = { findOne: jest.fn().mockResolvedValue(existing) };
+    const sentences = {
+      findOne: jest.fn().mockResolvedValue({ _id: target }),
+    };
+    const service = new ItemsService(
+      items as never,
+      sentences as never,
+      {} as never,
+      {} as never,
+    );
+    return { service, existing, target };
+  }
+
+  it('고른 글자가 달라졌으면 만남에 적힌 글자를 새로 고른 것으로 바꾼다', async () => {
+    const { service, existing, target } = setup('pa');
+
+    const result = await service.save(reader.toString(), {
+      sentenceId: target.toString(),
+      term: 'patronizing',
+      meaning: '가르치려 드는',
+      surface: 'patronizing',
+    });
+
+    expect(result.reencountered).toBe(false);
+    expect(existing.encounters[0].surface).toBe('patronizing');
+    expect(existing.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('글자가 같으면 아무것도 쓰지 않는다', async () => {
+    const { service, existing, target } = setup('patronizing');
+
+    await service.save(reader.toString(), {
+      sentenceId: target.toString(),
+      term: 'patronizing',
+      meaning: '가르치려 드는',
+      surface: 'patronizing',
+    });
+
+    expect(existing.save).not.toHaveBeenCalled();
+  });
+});

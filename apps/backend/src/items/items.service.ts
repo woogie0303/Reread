@@ -93,10 +93,21 @@ export class ItemsService {
       return { item: created, reencountered: false };
     }
 
-    const met = existing.encounters.some((encounter) =>
+    const met = existing.encounters.find((encounter) =>
       encounter.sentenceId.equals(sentence._id),
     );
-    if (met) return { item: existing, reencountered: false };
+    if (met) {
+      /**
+       * 같은 문장에서 이미 만난 표현이다 — 재회는 아니다. 다만 독자가 고른 글자가 달라졌으면
+       * (글자 인식이 'pa'로 쪼갠 것을 'patronizing'으로 고쳐 다시 물었다) 만남에 적힌 글자를
+       * 새로 고른 것으로 바꾼다. 안 그러면 문장 화면의 밑줄이 옛 글자에 남는다.
+       */
+      if (dto.surface && met.surface !== dto.surface) {
+        met.surface = dto.surface;
+        await existing.save();
+      }
+      return { item: existing, reencountered: false };
+    }
 
     const previous = existing.encounters[existing.encounters.length - 1];
     const first = existing.encounters[0];
