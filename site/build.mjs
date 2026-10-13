@@ -120,7 +120,7 @@ ${render(source)}
     </main>
 
     <footer>
-      <p><a href="/">Reread 홈</a> · <a href="mailto:woogie.support@gmail.com">woogie.support@gmail.com</a></p>
+      <p><a href="/">Reread 홈</a> · <a href="mailto:support.woogie@gmail.com">support.woogie@gmail.com</a></p>
       <p>© 2026 woogie · Reread</p>
     </footer>
   </div>
