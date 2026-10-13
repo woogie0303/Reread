@@ -148,4 +148,6 @@ export type ApiQuota = {
   ratio: number;
   remaining: number;
   resetsOn: string;
+  /** 오늘 광고로 더 받을 수 있는 횟수. 옛 서버는 보내지 않는다 */
+  adsLeftToday?: number;
 };

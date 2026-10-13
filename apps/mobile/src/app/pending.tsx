@@ -22,7 +22,6 @@ import {
   AppText,
   AskingOverlay,
   Icon,
-  Mark,
   ScreenHeader,
 } from '@/shared/ui';
 import { PendingList } from '@/widgets/pending-asks/ui/pending-list';
@@ -43,6 +42,8 @@ export default function PendingScreen() {
   const claim = useClaimAdBonus();
   const [watching, setWatching] = useState(false);
   const left = quota?.remaining ?? 0;
+  /** 하루 몫을 다 받았으면 광고를 보여 주기 전에 막는다 — 보고 나서 거절당하면 헛수고다 */
+  const adsExhausted = quota?.adsLeftToday === 0;
   const oldest = pending[pending.length - 1];
 
   /**
@@ -132,9 +133,39 @@ export default function PendingScreen() {
         contentContainerStyle={styles.content}
         style={styles.scroll}
       >
+        {/*
+          이 앱의 유일한 권유 자리. 이번 달 질문을 다 쓴 독자에게만 선다 —
+          남아 있는데 광고를 내밀면 읽는 흐름 속으로 들어온다. (ADR-0003)
+        */}
+        {pending.length && left === 0 ? (
+          <AltPanel style={styles.rewarded}>
+            <View style={styles.rewardedHead}>
+              <Icon name="sparkle" size={15} color={color.primary} />
+              <AppText style={styles.rewardedTitle}>
+                지금 바로 풀고 싶다면
+              </AppText>
+            </View>
+            <AppText style={styles.rewardedBody}>
+              {adsExhausted
+                ? '오늘 받을 수 있는 광고 보상을 모두 받았어요. 내일 다시 받을 수 있어요.'
+                : '광고를 한 번 보면 질문 3번이 더 생겨요. 읽는 중엔 광고가 나오지 않아요.'}
+            </AppText>
+            <ActionButton
+              label={
+                adsExhausted
+                  ? '오늘 보상을 모두 받았어요'
+                  : '광고 보고 질문 받기'
+              }
+              variant="subtle"
+              loading={watching}
+              disabled={adsExhausted}
+              onPress={watchAd}
+            />
+          </AltPanel>
+        ) : null}
+
         {/* 마지막 하나를 풀고 나면 0개가 된다 — 그때 '0개가 기다린다'고 하지 않는다 */}
         <AltPanel style={styles.hero}>
-          <Mark name={pending.length ? 'waiting' : 'empty'} size={104} />
           <AppText style={styles.heroTitle}>
             {pending.length
               ? `문장 ${pending.length}개가\n답을 기다리고 있어요`
@@ -166,31 +197,6 @@ export default function PendingScreen() {
           onRemove={confirmRemove}
           busyId={resolve.isPending ? resolve.variables : undefined}
         />
-
-        {/*
-          이 앱의 유일한 권유 자리. 이번 달 질문을 다 쓴 독자에게만 선다 —
-          남아 있는데 광고를 내밀면 읽는 흐름 속으로 들어온다. (ADR-0003)
-        */}
-        {pending.length && left === 0 ? (
-          <AltPanel style={styles.rewarded}>
-            <View style={styles.rewardedHead}>
-              <Icon name="sparkle" size={15} color={color.primary} />
-              <AppText style={styles.rewardedTitle}>
-                지금 바로 풀고 싶다면
-              </AppText>
-            </View>
-            <AppText style={styles.rewardedBody}>
-              광고를 한 번 보면 질문 3번이 더 생겨요. 읽는 중엔 광고가 나오지
-              않아요.
-            </AppText>
-            <ActionButton
-              label="광고 보고 질문 받기"
-              variant="subtle"
-              loading={watching}
-              onPress={watchAd}
-            />
-          </AltPanel>
-        ) : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
@@ -220,7 +226,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.surface.base },
   scroll: { flex: 1 },
   content: { paddingHorizontal: gutter, paddingBottom: 24, gap: 16 },
-  /** 용과 말이 한 줄로 가운데에 선다 — 왼쪽에 붙으면 오른쪽이 빈다 */
+  /** 말이 가운데에 선다 — 왼쪽에 붙으면 오른쪽이 빈다 */
   hero: {
     paddingVertical: 26,
     paddingHorizontal: 22,

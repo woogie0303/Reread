@@ -83,12 +83,16 @@ function run(kind: 'interstitial' | 'rewarded'): Promise<boolean> {
       }
 
       unsubscribe.push(
-        ad.addAdEventListener(AdEventType.LOADED, () => {
-          /** 불러온 뒤에는 시간 초과로 끊지 않는다 — 광고가 떠 있는 동안이다 */
-          clearTimeout(timer);
-          shown = true;
-          ad.show().catch(() => finish(false));
-        }),
+        /** 보상형은 불러옴 이벤트가 따로 있다 — AdEventType.LOADED를 달면 라이브러리가 던진다 */
+        ad.addAdEventListener(
+          kind === 'rewarded' ? RewardedAdEventType.LOADED : AdEventType.LOADED,
+          () => {
+            /** 불러온 뒤에는 시간 초과로 끊지 않는다 — 광고가 떠 있는 동안이다 */
+            clearTimeout(timer);
+            shown = true;
+            ad.show().catch(() => finish(false));
+          },
+        ),
         ad.addAdEventListener(AdEventType.ERROR, () => finish(false)),
         ad.addAdEventListener(AdEventType.CLOSED, () =>
           finish(kind === 'interstitial' ? shown : earned),
