@@ -1,6 +1,6 @@
+import * as apple from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
-import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
 import { api, baseUrl } from '@/shared/api/client';
@@ -28,57 +28,15 @@ import type { ProviderName, SignInResult } from '@/shared/api/types';
  * 브라우저 히스토리에 남을 수 있어서다.
  *
  * **Apple**만 다르다. iOS 시스템 창이 앱에 identityToken을 바로 주므로
- * 브라우저를 타지 않는다. 이 SDK는 네이티브 모듈이라 개발 빌드를 다시
- * 만들기 전에는 없다(Expo Go에서는 영영 없다) — 최상단에서 import하면
- * 모듈이 없을 때 이 파일이 끝까지 평가되지 못하고, 그러면 이걸 부르는
- * 화면의 default export까지 사라져 **앱이 통째로 죽는다**
- * (`shared/ocr/text-extractor.ts`가 같은 이유로 같은 방식을 쓴다). 그래서
- * 쓸 때가 되어서야 한 번 불러오고, 없으면 '설정 안 됨'으로 둔다.
+ * 브라우저를 타지 않는다.
  */
 
-type AppleSdk = {
-  AppleAuthenticationScope: { FULL_NAME: number; EMAIL: number };
-  signInAsync: (p: { requestedScopes: number[] }) => Promise<{
-    identityToken: string | null;
-    authorizationCode: string | null;
-    fullName: {
-      givenName: string | null;
-      familyName: string | null;
-      nickname: string | null;
-    } | null;
-  }>;
-};
-
-/* eslint-disable @typescript-eslint/no-require-imports */
-const apple: AppleSdk | null = (() => {
-  if (Platform.OS !== 'ios') return null;
-  try {
-    return require('expo-apple-authentication') as AppleSdk;
-  } catch {
-    return null;
-  }
-})();
-/* eslint-enable @typescript-eslint/no-require-imports */
-
-/**
- * 쓸 수 있는지는 네이티브 모듈이 들어 있는지뿐이다. 카카오·네이버·구글은 이제 앱이
- * 아무것도 들고 있지 않는다 — 안 됨을 알 방법이 없으니(서버가 설정됐는지는
- * 물어봐야 안다) 눌러 보게 두고, 안 되면 실패로 알린다. Apple만 Expo Go처럼
- * 모듈이 없는 곳에서 흐리게 남는다.
- */
-export function configured(provider: ProviderName): boolean {
-  if (provider !== 'apple') return true;
-  return Boolean(apple);
+/** 모든 제공자는 개발·출시 빌드에서 항상 쓸 수 있다 */
+export function configured(_provider: ProviderName): boolean {
+  return true;
 }
 
-/** Apple SDK는 쓰기 전에 한 번 깨워 둘 것이 없다 — 이름만 예전 화면과 맞춘다 */
-export function prepareSocialSignIn(): void {
-  if (__DEV__ && !configured('apple')) {
-    console.log(
-      '[oauth] Apple 로그인은 이 빌드에서 못 써요 — 개발 빌드(expo run:ios)가 필요해요 — Expo Go에는 모듈이 없어요.',
-    );
-  }
-}
+export function prepareSocialSignIn(): void {}
 
 /** 사용자가 동의 화면을 그냥 닫은 것 — 오류가 아니다 */
 export class SignInCancelled extends Error {}
@@ -101,9 +59,6 @@ export class SignInFailed extends Error {
 export async function signInWith(
   provider: ProviderName,
 ): Promise<SignInResult> {
-  if (!configured(provider))
-    throw new Error(`${provider} 로그인이 아직 설정되지 않았어요.`);
-
   if (provider === 'apple') return appleSignIn();
   return browserSignIn(provider);
 }
@@ -124,12 +79,7 @@ function joinName(
 }
 
 async function appleSignIn(): Promise<SignInResult> {
-  if (!apple)
-    throw new SignInFailed('이 빌드에 Apple 로그인이 없어요.', {
-      provider: 'apple',
-    });
-
-  let credential: Awaited<ReturnType<AppleSdk['signInAsync']>>;
+  let credential: Awaited<ReturnType<typeof apple.signInAsync>>;
   try {
     credential = await apple.signInAsync({
       requestedScopes: [
