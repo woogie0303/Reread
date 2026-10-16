@@ -20,6 +20,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMutation } from '@tanstack/react-query';
 
 import type { ProviderName } from '@/shared/api/types';
 import { color, gutter, type } from '@/shared/config';
@@ -49,7 +50,6 @@ const PROVIDERS: ProviderName[] = ['kakao', 'naver', 'google', 'apple'];
 export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const { signIn, reviewSignIn, problem } = useSession();
-  const [busy, setBusy] = useState<string | null>(null);
   const [reviewMode, setReviewMode] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewUsername, setReviewUsername] = useState('');
@@ -60,27 +60,26 @@ export default function SignInScreen() {
     isReviewModeEnabled().then(setReviewMode);
   }, []);
 
-  const attempt = async (label: string, run: () => Promise<void>) => {
-    setBusy(label);
-    try {
-      await run();
-    } catch (error) {
-      /** 동의 화면을 그냥 닫은 것은 실패가 아니다 */
-      if (error instanceof SignInCancelled) return;
-
-      /** 왜 안 됐는지를 말한다 — 조용히 아무 일도 안 일어나면 고칠 수가 없다 */
-      if (error instanceof SignInFailed) {
-        Alert.alert('로그인하지 못했어요', error.message);
-        return;
-      }
-      Alert.alert(
-        '로그인하지 못했어요',
-        error instanceof Error ? error.message : '',
-      );
-    } finally {
-      setBusy(null);
+  const onSignInError = (error: Error) => {
+    if (error instanceof SignInCancelled) return;
+    if (error instanceof SignInFailed) {
+      Alert.alert('로그인하지 못했어요', error.message);
+      return;
     }
+    Alert.alert('로그인하지 못했어요', error.message);
   };
+
+  const providerMutation = useMutation({
+    mutationFn: (provider: ProviderName) => signIn(provider),
+    onError: onSignInError,
+  });
+
+  const reviewMutation = useMutation({
+    mutationFn: ({ username, password }: { username: string; password: string }) =>
+      reviewSignIn(username, password),
+    onError: onSignInError,
+    onSuccess: () => setReviewModalVisible(false),
+  });
 
   return (
     <View
@@ -128,9 +127,9 @@ export default function SignInScreen() {
               key={name}
               name={name}
               ready={configured(name)}
-              loading={busy === name}
-              locked={busy !== null && busy !== name}
-              onPress={() => attempt(name, () => signIn(name))}
+              loading={providerMutation.isPending && providerMutation.variables === name}
+              locked={(providerMutation.isPending && providerMutation.variables !== name) || reviewMutation.isPending}
+              onPress={() => providerMutation.mutate(name)}
             />
           ))}
         </View>
@@ -157,7 +156,7 @@ export default function SignInScreen() {
                 autoCorrect={false}
                 returnKeyType="next"
                 onSubmitEditing={() => passwordRef.current?.focus()}
-                editable={busy === null}
+                editable={!reviewMutation.isPending}
               />
               <TextInput
                 ref={passwordRef}
@@ -170,35 +169,33 @@ export default function SignInScreen() {
                 autoCapitalize="none"
                 returnKeyType="done"
                 onSubmitEditing={() => {
-                  if (reviewUsername && reviewPassword && busy === null) {
-                    attempt('review', () => reviewSignIn(reviewUsername, reviewPassword)).then(
-                      () => setReviewModalVisible(false),
-                    );
+                  if (reviewUsername && reviewPassword && !reviewMutation.isPending) {
+                    reviewMutation.mutate({ username: reviewUsername, password: reviewPassword });
                   }
                 }}
-                editable={busy === null}
+                editable={!reviewMutation.isPending}
               />
               <Tap
                 style={[
                   styles.reviewBtn,
                   (!reviewUsername ||
                     !reviewPassword ||
-                    (busy !== null && busy !== 'review')) &&
+                    providerMutation.isPending ||
+                    reviewMutation.isPending) &&
                     styles.reviewBtnOff,
                 ]}
                 accessibilityLabel="심사용 계정으로 로그인"
                 onPress={() =>
-                  attempt('review', () =>
-                    reviewSignIn(reviewUsername, reviewPassword),
-                  ).then(() => setReviewModalVisible(false))
+                  reviewMutation.mutate({ username: reviewUsername, password: reviewPassword })
                 }
                 disabled={
                   !reviewUsername ||
                   !reviewPassword ||
-                  (busy !== null && busy !== 'review')
+                  providerMutation.isPending ||
+                  reviewMutation.isPending
                 }
               >
-                {busy === 'review' ? (
+                {reviewMutation.isPending ? (
                   <ActivityIndicator color={color.text.onInk} />
                 ) : (
                   <AppText style={styles.reviewBtnText}>로그인</AppText>
@@ -207,7 +204,7 @@ export default function SignInScreen() {
               <Tap
                 style={styles.cancelBtn}
                 onPress={() => setReviewModalVisible(false)}
-                disabled={busy === 'review'}
+                disabled={reviewMutation.isPending}
               >
                 <AppText style={styles.cancelBtnText}>취소</AppText>
               </Tap>
