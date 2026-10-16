@@ -19,11 +19,27 @@ const LOAD_TIMEOUT_MS = 6000;
 
 let started = false;
 
+/**
+ * AdMob 콘솔 → 개인정보 보호 및 메시지 → 테스트 기기에 등록한 기기 ID.
+ * 실기기에서 실제 광고 단위로 테스트할 때 계정 정지를 막는다.
+ * 기기 ID는 AdMob SDK 로그("Use RequestConfiguration.Builder...") 또는
+ * 콘솔 → 테스트 기기 → 기기 ID에서 확인한다.
+ */
+const TEST_DEVICE_IDS: string[] =
+  process.env.EXPO_PUBLIC_ADMOB_TEST_DEVICE_IDS
+    ? process.env.EXPO_PUBLIC_ADMOB_TEST_DEVICE_IDS.split(',').map((s) =>
+        s.trim(),
+      )
+    : [];
+
 /** 광고를 처음 부르기 전에 SDK를 깨운다. 한 번만. */
 async function start() {
   if (started) return;
   started = true;
   try {
+    if (TEST_DEVICE_IDS.length) {
+      await mobileAds().setRequestConfiguration({ testDeviceIdentifiers: TEST_DEVICE_IDS });
+    }
     await mobileAds().initialize();
   } catch {
     started = false;
