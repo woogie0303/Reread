@@ -4,7 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { color } from '@/shared/config';
@@ -13,7 +13,7 @@ import { QueryProvider } from '@/shared/query/provider';
 import { initMonitoring, wrapRoot } from '@/shared/monitoring/sentry';
 import { SessionProvider, useSession } from '@/shared/session/session';
 import { ToastHost } from '@/shared/ui';
-import { OnboardingRedirect } from '@/widgets/onboarding/model/onboarding-redirect';
+import { hasSeenOnboarding } from '@/widgets/onboarding/model/seen';
 
 initMonitoring();
 SplashScreen.preventAutoHideAsync();
@@ -46,11 +46,28 @@ export default wrapRoot(RootLayout);
  *
  * 세션이 정해지기 전에는 스플래시를 내리지 않는다 — 잠깐 로그인 화면이
  * 스쳤다가 홈으로 넘어가는 것이 앱이 고장난 것처럼 보이기 때문이다.
+ *
+ * 처음 온 기기에는 **로그인보다 안내가 먼저** 선다. 무엇을 하는 앱인지 보기도 전에
+ * 로그인을 요구하면 거기서 돌아선다 — 안내는 계정이 없어도 볼 수 있는 것이라
+ * 문 앞에 세울 이유가 없다.
  */
 function Gate() {
   const { status } = useSession();
   const segments = useSegments();
   const router = useRouter();
+
+  /** 안내를 봤는지는 기기에 적힌다 — 로그인 전에 묻는 것이라 독자를 아직 모른다 */
+  const [seen, setSeen] = useState<boolean | null>(null);
+  useEffect(() => {
+    hasSeenOnboarding().then(setSeen);
+  }, []);
+
+  /**
+   * 문은 실행마다 한 번만 고른다. 안내를 마치고 로그인으로 간 뒤에도 이 효과는 다시
+   * 도는데, 그때 기기에 적힌 값은 아직 이 컴포넌트에 올라와 있지 않아서 방금 끝낸
+   * 안내로 도로 돌려보내게 된다.
+   */
+  const routed = useRef(false);
 
   /**
    * 복습 알림을 눌러 앱이 열렸으면(꺼져 있던 앱도 포함) 알림이 말한 그 표현으로 간다.
@@ -74,18 +91,29 @@ function Gate() {
   }, [response, status, router]);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (status === 'loading' || seen === null) return;
 
     SplashScreen.hideAsync();
-    const atSignIn = segments[0] === 'sign-in';
-    if (status === 'out' && !atSignIn) router.replace('/sign-in');
-    if (status === 'in' && atSignIn) router.replace('/');
-  }, [status, segments, router]);
+    const at = segments[0];
+
+    if (status === 'in') {
+      /** 들어온 적이 있으면 이번 실행에서는 안내를 다시 고르지 않는다(로그아웃해도) */
+      routed.current = true;
+      if (at === 'sign-in' || at === 'onboarding') router.replace('/');
+      return;
+    }
+
+    if (!seen && !routed.current) {
+      routed.current = true;
+      router.replace('/onboarding');
+      return;
+    }
+
+    if (at !== 'sign-in' && at !== 'onboarding') router.replace('/sign-in');
+  }, [status, seen, segments, router]);
 
   return (
     <>
-      {/* 처음 온 독자를 안내로 — 서버를 부르는 훅이 들어 있어 로그인한 뒤에만 세운다 */}
-      {status === 'in' ? <OnboardingRedirect /> : null}
       <Stack
         screenOptions={{
           headerShown: false,
@@ -119,7 +147,7 @@ function Gate() {
         <Stack.Screen name="scan" />
         <Stack.Screen name="pending" />
         <Stack.Screen name="genres" />
-        {/* 밀어서 닫으면 '봤다'가 적히지 않는다 — 버튼으로만 끝낸다 */}
+        {/* 밀어서 닫으면 '봤다'가 적히지 않고, 로그인 전이면 돌아갈 자리도 없다 */}
         <Stack.Screen
           name="onboarding"
           options={{

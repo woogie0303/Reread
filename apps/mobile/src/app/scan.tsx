@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useGetAskQuota, usePostAsk } from '@/entities/ask/api/ask.api';
@@ -327,12 +327,16 @@ export default function ScanScreen() {
   if (!permission) return <View style={styles.screen} />;
 
   if (!permission.granted) {
+    if (permission.canAskAgain) {
+      requestPermission();
+      return <View style={styles.screen} />;
+    }
     return (
       <Notice
-        title="읽던 쪽을 찍으려면 카메라가 필요해요"
-        body="사진은 기기 밖으로 나가지 않아요. 읽어낸 글자만 서버로 가요."
-        action="카메라 허용하기"
-        onPress={requestPermission}
+        title="카메라 접근이 막혀 있어요"
+        body="설정에서 카메라 접근을 변경할 수 있어요."
+        action="설정 열기"
+        onPress={() => Linking.openSettings()}
         onBack={() => router.back()}
       />
     );
