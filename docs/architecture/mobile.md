@@ -24,9 +24,9 @@ src/
 
 Two concerns, two tools — never mix them:
 
-| Concern | Tool | Reason |
-|---------|------|--------|
-| Server data | React Query | Caching, invalidation, loading/error states |
+| Concern      | Tool          | Reason                                                        |
+| ------------ | ------------- | ------------------------------------------------------------- |
+| Server data  | React Query   | Caching, invalidation, loading/error states                   |
 | Auth session | React Context | Global, gates routing, must clear the query cache on sign-out |
 
 **Auth state shape**: `status: 'loading' | 'in' | 'out'`
@@ -51,8 +51,6 @@ entities/{domain}/api/
 **Query keys**: each entity owns one root key constant in `keys.ts`.
 Derived keys are composed inline (`[...booksKey, id]`).
 Cross-entity invalidations use the target entity's root key literal — no cross-entity key imports.
-
-Full rules and an example: [`API-CONVENTIONS.md`](../../apps/mobile/src/entities/API-CONVENTIONS.md).
 
 ## Auth pattern (browser OAuth + PKCE)
 
