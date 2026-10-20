@@ -35,9 +35,6 @@ export function useGetBooks() {
   });
 }
 
-/** @deprecated use useGetBooks */
-export const useBooks = useGetBooks;
-
 export function useGetBook(id?: string) {
   return useQuery({
     queryKey: [...booksKey, id],
@@ -46,8 +43,6 @@ export function useGetBook(id?: string) {
   });
 }
 
-/** @deprecated use useGetBook */
-export const useBook = useGetBook;
 
 /**
  * 읽고 있는 책들. 맨 앞은 **핀이 꽂힌 책** — 고정한 책이 있으면 그 책, 없으면
@@ -72,8 +67,6 @@ export function useGetReadingBooks() {
   });
 }
 
-/** @deprecated use useGetReadingBooks */
-export const useReadingBooks = useGetReadingBooks;
 
 export function useCurrentBook() {
   const query = useGetReadingBooks();
@@ -101,8 +94,6 @@ export function useGetBookSearch(query: string) {
   });
 }
 
-/** @deprecated use useGetBookSearch */
-export const useBookSearch = useGetBookSearch;
 
 function byLastRead(a: ApiBook, b: ApiBook): number {
   return time(b.lastReadAt ?? b.startedAt) - time(a.lastReadAt ?? a.startedAt);

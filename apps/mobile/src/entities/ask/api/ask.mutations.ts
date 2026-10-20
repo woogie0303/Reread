@@ -27,9 +27,6 @@ export function usePostAsk() {
   });
 }
 
-/** @deprecated use usePostAsk */
-export const useCreateAsk = usePostAsk;
-
 export function usePostResolveAsk() {
   const client = useQueryClient();
   return useMutation({
@@ -46,9 +43,6 @@ export function usePostResolveAsk() {
   });
 }
 
-/** @deprecated use usePostResolveAsk */
-export const useResolveAsk = usePostResolveAsk;
-
 export function usePostAdBonus() {
   const client = useQueryClient();
   return useMutation({
@@ -57,7 +51,5 @@ export function usePostAdBonus() {
   });
 }
 
-/** @deprecated use usePostAdBonus */
-export const useClaimAdBonus = usePostAdBonus;
 
 export type { ApiAsk, ApiAskView };

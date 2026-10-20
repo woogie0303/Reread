@@ -10,9 +10,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  useItem,
-  useItems,
-  useRemoveEncounters,
+  useGetItem,
+  useGetItems,
+  usePostRemoveEncounters,
 } from '@/entities/lexical-item/api/item.api';
 import { color, gutter, type } from '@/shared/config';
 import {
@@ -40,11 +40,11 @@ export default function ItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { data: detail, isPending, error } = useItem(id);
+  const { data: detail, isPending, error } = useGetItem(id);
   /** 헷갈리는 짝은 표제형 하나만 있으면 되므로 따로 한 번 더 물어본다 */
-  const { data: twin } = useItem(detail?.item.confusedWith?.itemId);
-  const { data: items = [] } = useItems();
-  const remove = useRemoveEncounters();
+  const { data: twin } = useGetItem(detail?.item.confusedWith?.itemId);
+  const { data: items = [] } = useGetItems();
+  const remove = usePostRemoveEncounters();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);

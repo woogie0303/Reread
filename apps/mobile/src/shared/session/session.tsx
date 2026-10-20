@@ -16,7 +16,7 @@ import type {
   ReaderView,
   SignInResult,
 } from '@/shared/api/types';
-import { prepareSocialSignIn, reviewSignIn as doReviewSignIn, signInWith } from './oauth';
+import { reviewSignIn as doReviewSignIn, signInWith } from './oauth';
 
 type Status = 'loading' | 'in' | 'out';
 
@@ -69,7 +69,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
      * 소셜 SDK는 쓰기 전에 깨워둬야 한다 — 버튼을 누른 뒤에 초기화하면
      * 첫 번째 누름이 조용히 실패한다.
      */
-    prepareSocialSignIn();
 
     (async () => {
       const stored = await readTokens();
@@ -102,7 +101,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       reader,
       problem,
       signIn: async (provider) => enter(await signInWith(provider)),
-      reviewSignIn: async (username, password) => enter(await doReviewSignIn(username, password)),
+      reviewSignIn: async (username, password) =>
+        enter(await doReviewSignIn(username, password)),
       signOut: async () => {
         /** 남의 계정으로 알림이 울리지 않게 — 예약과 설정을 먼저 지운다 */
         await clearReminder();

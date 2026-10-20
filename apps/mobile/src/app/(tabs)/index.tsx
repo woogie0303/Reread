@@ -2,9 +2,9 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useReadingBooks } from '@/entities/book/api/book.api';
+import { useGetReadingBooks } from '@/entities/book/api/book.api';
 import { useTodayItem } from '@/entities/lexical-item/api/item.api';
-import { useReadingWeek } from '@/entities/reading/api/reading.api';
+import { useGetReadingWeek } from '@/entities/reading/api/reading.api';
 import { color, gutter } from '@/shared/config';
 import { ActionButton, EmptyState } from '@/shared/ui';
 import { useOpenScan } from '@/widgets/capture/lib/use-open-scan';
@@ -37,11 +37,11 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const openScan = useOpenScan();
-  const { data: shelf, isPending } = useReadingBooks();
+  const { data: shelf, isPending } = useGetReadingBooks();
   /** 맨 위에 크게 서는 한 권과, 그 아래 줄에 서는 나머지 */
   const reading = shelf?.[0];
   const others = (shelf?.slice(1) ?? []).map((row) => row.book);
-  const { data: week } = useReadingWeek();
+  const { data: week } = useGetReadingWeek();
   const { today } = useTodayItem();
   const book = reading?.book;
 

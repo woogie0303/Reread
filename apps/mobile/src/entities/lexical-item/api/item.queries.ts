@@ -82,9 +82,6 @@ export function useGetItems(params?: {
   });
 }
 
-/** @deprecated use useGetItems */
-export const useItems = useGetItems;
-
 export function useGetItem(id?: string) {
   return useQuery({
     queryKey: [...itemsKey, 'detail', id],
@@ -93,8 +90,6 @@ export function useGetItem(id?: string) {
   });
 }
 
-/** @deprecated use useGetItem */
-export const useItem = useGetItem;
 
 export function useTodayItem() {
   const query = useGetItems();

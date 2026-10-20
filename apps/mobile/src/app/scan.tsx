@@ -4,11 +4,11 @@ import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAskQuota, useCreateAsk } from '@/entities/ask/api/ask.api';
+import { useGetAskQuota, usePostAsk } from '@/entities/ask/api/ask.api';
 import { explainAskError } from '@/entities/ask/lib/explain-error';
-import { useBook, useCurrentBook } from '@/entities/book/api/book.api';
-import { useUpdateProgress } from '@/entities/reading/api/reading.api';
-import { useCreateSentence } from '@/entities/sentence/api/sentence.api';
+import { useGetBook, useCurrentBook } from '@/entities/book/api/book.api';
+import { usePatchProgress } from '@/entities/reading/api/reading.api';
+import { usePostSentence } from '@/entities/sentence/api/sentence.api';
 import { color, gutter, ink, type } from '@/shared/config';
 import {
   followEdit,
@@ -81,14 +81,14 @@ export default function ScanScreen() {
   /** 미리 채우지 않는다 — 독자가 직접 적는다 */
   const [pageEdit, setPageEdit] = useState<string>();
 
-  const createAsk = useCreateAsk();
-  const keepSentence = useCreateSentence();
-  const { data: quota } = useAskQuota();
+  const createAsk = usePostAsk();
+  const keepSentence = usePostSentence();
+  const { data: quota } = useGetAskQuota();
   const { data: current } = useCurrentBook();
-  const { data: chosen } = useBook(params.bookId);
+  const { data: chosen } = useGetBook(params.bookId);
   const book = chosen ?? current?.book;
   const left = quota?.remaining ?? 0;
-  const moveProgress = useUpdateProgress(book?.id ?? '');
+  const moveProgress = usePatchProgress(book?.id ?? '');
 
   const lastPage =
     (current?.book.id === book?.id

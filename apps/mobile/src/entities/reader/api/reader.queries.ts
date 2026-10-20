@@ -10,5 +10,3 @@ export function useGetReader() {
   });
 }
 
-/** @deprecated use useGetReader */
-export const useReader = useGetReader;

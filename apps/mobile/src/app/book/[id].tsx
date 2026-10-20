@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  useBook,
+  useGetBook,
   useCurrentBook,
   useDeleteBook,
   useUpdateBook,
@@ -38,7 +38,7 @@ export default function BookScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const openScan = useOpenScan();
-  const { data: book, isPending } = useBook(id);
+  const { data: book, isPending } = useGetBook(id);
   const { data: reading } = useCurrentBook();
   const remove = useDeleteBook();
   const update = useUpdateBook(id);

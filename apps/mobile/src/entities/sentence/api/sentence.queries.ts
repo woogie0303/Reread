@@ -19,9 +19,6 @@ export function useGetSentence(id?: string) {
   });
 }
 
-/** @deprecated use useGetSentence */
-export const useSentence = useGetSentence;
-
 export function useGetSentenceAsk(id?: string) {
   return useQuery({
     queryKey: ['asks', 'sentence', id],
@@ -30,9 +27,6 @@ export function useGetSentenceAsk(id?: string) {
     select: mergeAsks,
   });
 }
-
-/** @deprecated use useGetSentenceAsk */
-export const useSentenceAsk = useGetSentenceAsk;
 
 function mergeAsks(views: ApiAskView[]): ApiAskView | null {
   if (!views.length) return null;
@@ -64,9 +58,6 @@ export function useGetLikedSentences(bookId?: string) {
     queryFn: () => api<ApiSentence[]>(`/sentences?bookId=${bookId}&liked=true`),
   });
 }
-
-/** @deprecated use useGetLikedSentences */
-export const useLikedSentences = useGetLikedSentences;
 
 export function useSentenceFeed() {
   const [limit, setLimit] = useState(FEED_PAGE);
@@ -123,5 +114,3 @@ export function useGetBookSentenceFeed(bookId: string) {
   return { rows, isPending: sentences.isPending || items.isPending };
 }
 
-/** @deprecated use useGetBookSentenceFeed */
-export const useBookSentenceFeed = useGetBookSentenceFeed;

@@ -3,8 +3,8 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { Book } from '@/entities/book/model/types';
 import type { ReadingProgress } from '@/entities/reading/model/types';
-import { useBookSentenceFeed } from '@/entities/sentence/api/feed.api';
-import { useLikedSentences } from '@/entities/sentence/api/sentence.api';
+import { useGetBookSentenceFeed } from '@/entities/sentence/api/feed.api';
+import { useGetLikedSentences } from '@/entities/sentence/api/sentence.api';
 import { SentenceCard } from '@/entities/sentence/ui/sentence-card';
 import { color } from '@/shared/config';
 import { EmptyState } from '@/shared/ui';
@@ -43,10 +43,10 @@ export function BookDetail({
   onPressProgress?: () => void;
 }) {
   const [tab, setTab] = useState<BookTab>(initialTab ?? 'items');
-  const { rows: claimed, isPending: claimedPending } = useBookSentenceFeed(
+  const { rows: claimed, isPending: claimedPending } = useGetBookSentenceFeed(
     book.id,
   );
-  const { data: sentences = [] } = useLikedSentences(book.id);
+  const { data: sentences = [] } = useGetLikedSentences(book.id);
   const liked = sentences.map((sentence) => ({
     id: sentence._id,
     text: sentence.text,

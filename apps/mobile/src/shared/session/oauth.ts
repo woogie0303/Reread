@@ -36,8 +36,6 @@ export function configured(_provider: ProviderName): boolean {
   return true;
 }
 
-export function prepareSocialSignIn(): void {}
-
 /** 사용자가 동의 화면을 그냥 닫은 것 — 오류가 아니다 */
 export class SignInCancelled extends Error {}
 
@@ -199,7 +197,10 @@ async function browserSignIn(
 }
 
 /** App Store 심사용 — 서버에서 IS_APPLE_REVIEW=true 일 때만 동작한다 */
-export async function reviewSignIn(username: string, password: string): Promise<SignInResult> {
+export async function reviewSignIn(
+  username: string,
+  password: string,
+): Promise<SignInResult> {
   return api<SignInResult>('/auth/review', {
     method: 'POST',
     anonymous: true,

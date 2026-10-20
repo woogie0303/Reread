@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useBook, useCurrentBook } from '@/entities/book/api/book.api';
-import { useUpdateProgress } from '@/entities/reading/api/reading.api';
+import { useGetBook, useCurrentBook } from '@/entities/book/api/book.api';
+import { usePatchProgress } from '@/entities/reading/api/reading.api';
 import { color, gutter, type } from '@/shared/config';
 import {
   ActionButton,
@@ -30,9 +30,9 @@ export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { bookId } = useLocalSearchParams<{ bookId?: string }>();
-  const { data: book } = useBook(bookId);
+  const { data: book } = useGetBook(bookId);
   const { data: reading } = useCurrentBook();
-  const update = useUpdateProgress(bookId ?? '');
+  const update = usePatchProgress(bookId ?? '');
   /**
    * 지난번에 적은 쪽이 먼저 들어가 있다 — 대개 거기서 조금 더 읽었으니 끝자리만
    * 고치면 된다. 손대기 전까지는 책이 불러와지는 대로 그 값을 따른다.

@@ -10,18 +10,12 @@ export function useGetAskQuota() {
   });
 }
 
-/** @deprecated use useGetAskQuota */
-export const useAskQuota = useGetAskQuota;
-
 export function useGetPendingAsks() {
   return useQuery({
     queryKey: [...asksKey, 'pending'],
     queryFn: () => api<ApiAskView[]>('/asks?status=pending'),
   });
 }
-
-/** @deprecated use useGetPendingAsks */
-export const usePendingAsks = useGetPendingAsks;
 
 export function useGetAsk(id?: string) {
   return useQuery({
@@ -31,5 +25,3 @@ export function useGetAsk(id?: string) {
   });
 }
 
-/** @deprecated use useGetAsk */
-export const useAsk = useGetAsk;

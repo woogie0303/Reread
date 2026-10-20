@@ -18,5 +18,3 @@ export function usePatchProgress(bookId: string) {
   });
 }
 
-/** @deprecated use usePatchProgress */
-export const useUpdateProgress = usePatchProgress;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking } from 'react-native';
 
-import { useItems } from '@/entities/lexical-item/api/item.api';
+import { useGetItems } from '@/entities/lexical-item/api/item.api';
 import {
   DEFAULT_REMINDER,
   cancelReminders,
@@ -21,7 +21,7 @@ import { planReminders } from '../lib/plan';
  * 켜는 순간(`useReminderSetting`)뿐이다.
  */
 export function useReminderSync() {
-  const { data: items } = useItems();
+  const { data: items } = useGetItems();
 
   useEffect(() => {
     if (!items) return;
@@ -44,7 +44,7 @@ export function useReminderSync() {
 
 /** 마이 탭의 켜기·끄기와 시각 고르기 */
 export function useReminderSetting() {
-  const { data: items = [] } = useItems();
+  const { data: items = [] } = useGetItems();
   const [setting, setSetting] = useState<ReminderSetting>(DEFAULT_REMINDER);
   const [ready, setReady] = useState(false);
 

@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
-import { useBooks } from '@/entities/book/api/book.api';
+import { useGetBooks } from '@/entities/book/api/book.api';
 import { useSession } from '@/shared/session/session';
 import { hasSeenOnboarding } from './seen';
 
@@ -16,7 +16,7 @@ import { hasSeenOnboarding } from './seen';
 export function OnboardingRedirect() {
   const router = useRouter();
   const { reader } = useSession();
-  const { data: books } = useBooks();
+  const { data: books } = useGetBooks();
   const [seen, setSeen] = useState<boolean | null>(null);
   const decided = useRef(false);
 

@@ -1,1 +1,1 @@
-export { useSentenceFeed, useGetBookSentenceFeed, useBookSentenceFeed } from './sentence.queries';
+export { useSentenceFeed, useGetBookSentenceFeed } from './sentence.queries';

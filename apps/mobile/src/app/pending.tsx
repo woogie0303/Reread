@@ -4,10 +4,10 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  usePendingAsks,
-  useAskQuota,
-  useClaimAdBonus,
-  useResolveAsk,
+  useGetPendingAsks,
+  useGetAskQuota,
+  usePostAdBonus,
+  usePostResolveAsk,
 } from '@/entities/ask/api/ask.api';
 import { explainAskError } from '@/entities/ask/lib/explain-error';
 import { usagePercent } from '@/entities/ask/lib/quota';
@@ -35,11 +35,11 @@ import { PendingList } from '@/widgets/pending-asks/ui/pending-list';
 export default function PendingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { data: pending = [] } = usePendingAsks();
-  const { data: quota } = useAskQuota();
-  const resolve = useResolveAsk();
+  const { data: pending = [] } = useGetPendingAsks();
+  const { data: quota } = useGetAskQuota();
+  const resolve = usePostResolveAsk();
   const remove = useDeleteSentence();
-  const claim = useClaimAdBonus();
+  const claim = usePostAdBonus();
   const [watching, setWatching] = useState(false);
   const left = quota?.remaining ?? 0;
   /** 하루 몫을 다 받았으면 광고를 보여 주기 전에 막는다 — 보고 나서 거절당하면 헛수고다 */

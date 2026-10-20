@@ -10,14 +10,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAskQuota, useCreateAsk } from '@/entities/ask/api/ask.api';
+import { useGetAskQuota, usePostAsk } from '@/entities/ask/api/ask.api';
 import { explainAskError } from '@/entities/ask/lib/explain-error';
 import { usagePercent } from '@/entities/ask/lib/quota';
-import { useBook, useCurrentBook } from '@/entities/book/api/book.api';
-import { useUpdateProgress } from '@/entities/reading/api/reading.api';
+import { useGetBook, useCurrentBook } from '@/entities/book/api/book.api';
+import { usePatchProgress } from '@/entities/reading/api/reading.api';
 import {
-  useCreateSentence,
-  useSentence,
+  usePostSentence,
+  useGetSentence,
 } from '@/entities/sentence/api/sentence.api';
 import { color, gutter, type } from '@/shared/config';
 import { limitMessage, surfaceOf, tokenize } from '@/shared/ocr/selection';
@@ -64,7 +64,7 @@ export default function AskScreen() {
 
   const params = useLocalSearchParams<Params>();
   /** 담아둔 문장을 묻는 길 — 글은 그 문장 그대로다 */
-  const saved = useSentence(params.sentenceId);
+  const saved = useGetSentence(params.sentenceId);
   const fixed = Boolean(params.sentenceId);
   /** 찍어온 쪽에서 고른 문장이 있으면 그걸로 시작한다 */
   const [typed, setTyped] = useState(params.text ?? '');
@@ -87,9 +87,9 @@ export default function AskScreen() {
   /** 글을 고치면 단어 자리가 바뀐다 — 고른 것을 풀어야 엉뚱한 단어가 칠해지지 않는다 */
   useEffect(() => clearPicks(), [sentence, clearPicks]);
 
-  const { data: quota } = useAskQuota();
+  const { data: quota } = useGetAskQuota();
   const { data: current } = useCurrentBook();
-  const { data: chosen } = useBook(params.bookId);
+  const { data: chosen } = useGetBook(params.bookId);
   const book = chosen ?? current?.book;
   /**
    * 쪽수는 꼭 적는다 — 나중에 이 문장을 다시 찾을 때 붙잡을 곳이 쪽수뿐이다.
@@ -113,10 +113,10 @@ export default function AskScreen() {
   const askable = fixed
     ? Boolean(saved.data && surfaces.length)
     : ready && surfaces.length > 0;
-  const moveProgress = useUpdateProgress(book?.id ?? '');
+  const moveProgress = usePatchProgress(book?.id ?? '');
 
-  const createAsk = useCreateAsk();
-  const keepSentence = useCreateSentence();
+  const createAsk = usePostAsk();
+  const keepSentence = usePostSentence();
 
   const left = quota?.remaining ?? 0;
 

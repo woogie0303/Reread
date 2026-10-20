@@ -2,11 +2,11 @@ import { useRouter } from 'expo-router';
 import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAskQuota } from '@/entities/ask/api/ask.api';
+import { useGetAskQuota } from '@/entities/ask/api/ask.api';
 import { usagePercent } from '@/entities/ask/lib/quota';
-import { useItems } from '@/entities/lexical-item/api/item.api';
-import { useDeleteAccount, useReader } from '@/entities/reader/api/reader.api';
-import { useReadingWeek } from '@/entities/reading/api/reading.api';
+import { useGetItems } from '@/entities/lexical-item/api/item.api';
+import { useDeleteAccount, useGetReader } from '@/entities/reader/api/reader.api';
+import { useGetReadingWeek } from '@/entities/reading/api/reading.api';
 import { PRIVACY_POLICY_URL, color, gutter, type } from '@/shared/config';
 import { useSession } from '@/shared/session/session';
 import {
@@ -36,10 +36,10 @@ export default function MyScreen() {
   const router = useRouter();
   const { signOut } = useSession();
   const deleteAccount = useDeleteAccount();
-  const { data: reader } = useReader();
-  const { data: items = [] } = useItems();
-  const { data: quota } = useAskQuota();
-  const { data: week } = useReadingWeek();
+  const { data: reader } = useGetReader();
+  const { data: items = [] } = useGetItems();
+  const { data: quota } = useGetAskQuota();
+  const { data: week } = useGetReadingWeek();
   const again = items.filter((i) => i.met > 1).length;
   const left = quota?.remaining ?? 0;
   const ratio = quota?.ratio ?? 0;

@@ -12,17 +12,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useBooks } from '@/entities/book/api/book.api';
-import { useItems } from '@/entities/lexical-item/api/item.api';
-import { useReader } from '@/entities/reader/api/reader.api';
+import { useGetBooks } from '@/entities/book/api/book.api';
+import { useGetItems } from '@/entities/lexical-item/api/item.api';
+import { useGetReader } from '@/entities/reader/api/reader.api';
 import {
-  useAddThought,
-  useClearExpressions,
+  usePostThought,
+  useDeleteExpressions,
   useDeleteSentence,
-  useFavoriteSentence,
-  useRemoveThought,
-  useSentence,
-  useSentenceAsk,
+  usePatchSentenceFavorite,
+  useDeleteThought,
+  useGetSentence,
+  useGetSentenceAsk,
 } from '@/entities/sentence/api/sentence.api';
 import {
   clearMessage,
@@ -92,17 +92,17 @@ export default function SentenceScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const sentence = useSentence(id);
-  const asked = useSentenceAsk(id);
-  const { data: books = [] } = useBooks();
-  const { data: items = [] } = useItems();
+  const sentence = useGetSentence(id);
+  const asked = useGetSentenceAsk(id);
+  const { data: books = [] } = useGetBooks();
+  const { data: items = [] } = useGetItems();
 
   const remove = useDeleteSentence();
-  const clear = useClearExpressions();
-  const favorite = useFavoriteSentence();
-  const addThought = useAddThought(id);
-  const removeThought = useRemoveThought(id);
-  const { data: reader } = useReader();
+  const clear = useDeleteExpressions();
+  const favorite = usePatchSentenceFavorite();
+  const addThought = usePostThought(id);
+  const removeThought = useDeleteThought(id);
+  const { data: reader } = useGetReader();
   const nickname = reader?.nickname ?? '나';
 
   const sendThought = async (text: string) => {

@@ -4,11 +4,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSentenceFeed } from '@/entities/sentence/api/feed.api';
 import { SentenceCard } from '@/entities/sentence/ui/sentence-card';
 import { color, type } from '@/shared/config';
-import {
-  AppText,
-  EmptyState,
-  Tap,
-} from '@/shared/ui';
+import { AppText, EmptyState, Tap } from '@/shared/ui';
 import {
   DRAWER_MATCH,
   DrawerFilterRow,

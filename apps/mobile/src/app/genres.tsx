@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
-  useGenreStats,
-  useReadingMonth,
-  useReadingRange,
-  useReadingWeek,
+  useGetGenreStats,
+  useGetReadingMonth,
+  useGetReadingRange,
+  useGetReadingWeek,
 } from '@/entities/reading/api/reading.api';
 import { color, gutter, type } from '@/shared/config';
 import { AppText, EmptyState, ScreenHeader } from '@/shared/ui';
@@ -33,10 +33,10 @@ export default function ReadingReportScreen() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
 
-  const genres = useGenreStats();
-  const calendar = useReadingMonth(year, month);
-  const { data: range } = useReadingRange();
-  const { data: week } = useReadingWeek();
+  const genres = useGetGenreStats();
+  const calendar = useGetReadingMonth(year, month);
+  const { data: range } = useGetReadingRange();
+  const { data: week } = useGetReadingWeek();
 
   const shares = genres.data ?? [];
   const allPages = shares.reduce((sum, share) => sum + share.pages, 0);

@@ -29,9 +29,6 @@ export function useDeleteExpressions() {
   });
 }
 
-/** @deprecated use useDeleteExpressions */
-export const useClearExpressions = useDeleteExpressions;
-
 export function usePostThought(sentenceId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -45,9 +42,6 @@ export function usePostThought(sentenceId: string) {
   });
 }
 
-/** @deprecated use usePostThought */
-export const useAddThought = usePostThought;
-
 export function useDeleteThought(sentenceId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -59,9 +53,6 @@ export function useDeleteThought(sentenceId: string) {
       client.setQueryData([...sentencesKey, 'one', sentenceId], sentence),
   });
 }
-
-/** @deprecated use useDeleteThought */
-export const useRemoveThought = useDeleteThought;
 
 export function usePatchSentenceFavorite() {
   const client = useQueryClient();
@@ -78,9 +69,6 @@ export function usePatchSentenceFavorite() {
   });
 }
 
-/** @deprecated use usePatchSentenceFavorite */
-export const useFavoriteSentence = usePatchSentenceFavorite;
-
 export function usePostSentence() {
   const client = useQueryClient();
   return useMutation({
@@ -90,5 +78,3 @@ export function usePostSentence() {
   });
 }
 
-/** @deprecated use usePostSentence */
-export const useCreateSentence = usePostSentence;

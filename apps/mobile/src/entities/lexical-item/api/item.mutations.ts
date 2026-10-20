@@ -12,8 +12,6 @@ export function usePatchItem(id: string) {
   });
 }
 
-/** @deprecated use usePatchItem */
-export const useUpdateItem = usePatchItem;
 
 export function usePostRemoveEncounters() {
   const client = useQueryClient();
@@ -37,5 +35,3 @@ export function usePostRemoveEncounters() {
   });
 }
 
-/** @deprecated use usePostRemoveEncounters */
-export const useRemoveEncounters = usePostRemoveEncounters;

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useBook, useUpdateBook } from '@/entities/book/api/book.api';
+import { useGetBook, useUpdateBook } from '@/entities/book/api/book.api';
 import type { Book } from '@/entities/book/model/types';
 import { color, gutter } from '@/shared/config';
 import { ActionButton, ScreenHeader } from '@/shared/ui';
@@ -28,7 +28,7 @@ import { BookAdd, type BookDraft } from '@/widgets/book-add/ui/book-add';
  */
 export default function BookEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: book } = useBook(id);
+  const { data: book } = useGetBook(id);
 
   /** 책을 받아온 다음에야 폼의 첫 값이 정해진다 — 그 전엔 폼을 세우지 않는다 */
   return book ? (

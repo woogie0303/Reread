@@ -9,7 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  useBookSearch,
+  useGetBookSearch,
   type BookSearchResult,
 } from '@/entities/book/api/book.api';
 import { spineFor } from '@/entities/book/lib/spine';
@@ -46,7 +46,7 @@ export default function BookSearchScreen() {
     return () => clearTimeout(timer);
   }, [query]);
   const typing = query.trim() !== settled.trim();
-  const { data: results, isFetching, isError } = useBookSearch(settled);
+  const { data: results, isFetching, isError } = useGetBookSearch(settled);
   const busy = typing || isFetching;
 
   const pick = (book: BookSearchResult) =>

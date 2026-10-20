@@ -95,7 +95,10 @@ export class AuthService {
   }
 
   /** IS_APPLE_REVIEW=true 일 때만 동작하는 심사용 계정 로그인 */
-  async reviewSignIn(username: string, password: string): Promise<SignInResult> {
+  async reviewSignIn(
+    username: string,
+    password: string,
+  ): Promise<SignInResult> {
     const enabled = this.config.get<string>('IS_APPLE_REVIEW') === 'true';
     if (!enabled) throw new UnauthorizedException('심사 모드가 꺼져 있어요.');
 

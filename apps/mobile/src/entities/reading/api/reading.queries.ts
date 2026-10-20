@@ -47,9 +47,6 @@ export function useGetReadingWeek() {
   });
 }
 
-/** @deprecated use useGetReadingWeek */
-export const useReadingWeek = useGetReadingWeek;
-
 export function useGetGenreStats() {
   return useQuery({
     queryKey: [...readingKey, 'genres'],
@@ -68,9 +65,6 @@ export function useGetGenreStats() {
     },
   });
 }
-
-/** @deprecated use useGetGenreStats */
-export const useGenreStats = useGetGenreStats;
 
 function partition<T>(items: T[], test: (item: T) => boolean): [T[], T[]] {
   const yes: T[] = [];
@@ -96,9 +90,6 @@ export function useGetReadingRange() {
   });
 }
 
-/** @deprecated use useGetReadingRange */
-export const useReadingRange = useGetReadingRange;
-
 export function useGetReadingMonth(year: number, month: number) {
   return useQuery({
     queryKey: [...readingKey, 'days', year, month],
@@ -114,5 +105,3 @@ export function useGetReadingMonth(year: number, month: number) {
   });
 }
 
-/** @deprecated use useGetReadingMonth */
-export const useReadingMonth = useGetReadingMonth;
