@@ -99,7 +99,8 @@ function Gate() {
     if (status === 'in') {
       /** 들어온 적이 있으면 이번 실행에서는 안내를 다시 고르지 않는다(로그아웃해도) */
       routed.current = true;
-      if (at === 'sign-in' || at === 'onboarding') router.replace('/');
+      /** 안내는 되돌리지 않는다 — 마이 탭의 '사용 방법'이 로그인한 채로 여는 화면이다 */
+      if (at === 'sign-in') router.replace('/');
       return;
     }
 
