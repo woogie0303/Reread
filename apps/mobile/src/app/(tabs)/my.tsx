@@ -14,8 +14,8 @@ import {
   AltPanel,
   AppText,
   DisclosureRow,
-
   ProgressBar,
+  showToast,
   Tap,
 } from '@/shared/ui';
 import { ReminderSettings } from '@/widgets/review-reminder/ui/reminder-settings';
@@ -34,7 +34,7 @@ import { ReminderSettings } from '@/widgets/review-reminder/ui/reminder-settings
 export default function MyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signOut, reader: session } = useSession();
+  const { signOut, forget, reader: session } = useSession();
   /** 로그인 없이 쓰는 중 — 로그아웃하면 기록에 다시 닿을 길이 없어서 그 대신 로그인을 권한다 */
   const anonymous = Boolean(session?.anonymous);
   const deleteAccount = useDeleteAccount();
@@ -73,7 +73,11 @@ export default function MyScreen() {
           style: 'destructive',
           onPress: () =>
             deleteAccount.mutate(undefined, {
-              onSuccess: () => signOut(),
+              onSuccess: async () => {
+                await forget();
+                router.replace('/');
+                showToast('계정을 삭제했어요');
+              },
               onError: (error) =>
                 Alert.alert(
                   '삭제하지 못했어요',
@@ -167,18 +171,24 @@ export default function MyScreen() {
           </View>
         )}
 
-        {/* 되돌릴 수 없는 일은 눈에 띄는 버튼으로 세우지 않고, 찾으면 닿는 곳에 조용히 둔다 */}
-        <Tap
-          onPress={confirmDelete}
-          disabled={deleteAccount.isPending}
-          accessibilityRole="button"
-          accessibilityLabel="계정 삭제"
-          style={styles.delete}
-        >
-          <AppText style={styles.deleteLabel}>
-            {deleteAccount.isPending ? '삭제하는 중…' : '계정 삭제'}
-          </AppText>
-        </Tap>
+        {/*
+          되돌릴 수 없는 일은 눈에 띄는 버튼으로 세우지 않고, 찾으면 닿는 곳에 조용히 둔다.
+          익명 독자에게는 지울 계정이 없다 — 만든 적 없는 계정을 지우라는 말은 어색하고,
+          그만 쓰려면 앱을 지우면 된다.
+        */}
+        {anonymous ? null : (
+          <Tap
+            onPress={confirmDelete}
+            disabled={deleteAccount.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="계정 삭제"
+            style={styles.delete}
+          >
+            <AppText style={styles.deleteLabel}>
+              {deleteAccount.isPending ? '삭제하는 중…' : '계정 삭제'}
+            </AppText>
+          </Tap>
+        )}
 
         {/* 개발 빌드에서만 — 캐릭터 9개를 한 번에 확인하는 자리, 출시에는 안 나간다 */}
         {__DEV__ ? (

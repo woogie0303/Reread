@@ -16,7 +16,11 @@ import type {
   ReaderView,
   SignInResult,
 } from '@/shared/api/types';
-import { readLastProvider, saveLastProvider } from './last-provider';
+import {
+  clearLastProvider,
+  readLastProvider,
+  saveLastProvider,
+} from './last-provider';
 import {
   anonymousSignIn,
   reviewSignIn as doReviewSignIn,
@@ -38,6 +42,11 @@ type Session = {
   signIn: (provider: ProviderName) => Promise<void>;
   reviewSignIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /**
+   * 계정을 지운 뒤에 — 이 기기를 처음 깐 것처럼 되돌리고 익명으로 새로 들어간다.
+   * 서버에서 이미 지워진 계정이라 로그아웃 요청은 보내지 않는다.
+   */
+  forget: () => Promise<void>;
 };
 
 const SessionContext = createContext<Session | null>(null);
@@ -174,8 +183,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setReader(null);
         setStatus('out');
       },
+      forget: async () => {
+        /**
+         * 계정을 지운 사람은 이 앱과의 연결을 끊은 것이다 — 이 기기를 '로그인했던 기기'로
+         * 붙들어 로그인 화면에 세울 이유가 없다. 알림·토큰·'최근 로그인'을 지우고, 처음
+         * 깐 기기처럼 익명으로 들어간다. 안내는 이미 봤으니 다시 띄우지 않는다.
+         */
+        await clearReminder();
+        await Promise.all([clearTokens(), clearLastProvider()]);
+        queryClient.clear();
+        setReader(null);
+        setStatus('loading');
+        await open(true);
+      },
     }),
-    [status, reader, problem, fresh, enter, queryClient],
+    [status, reader, problem, fresh, enter, open, queryClient],
   );
 
   return (

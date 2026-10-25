@@ -30,3 +30,12 @@ export async function saveLastProvider(provider: ProviderName): Promise<void> {
     /* 못 적어도 '최근 로그인' 표시가 빠질 뿐이다 */
   }
 }
+
+/** 계정을 지웠을 때만 — 없는 계정의 버튼에 '최근 로그인'이 남으면 안 된다 */
+export async function clearLastProvider(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(KEY);
+  } catch {
+    /* 못 지우면 다음 실행에 로그인 화면이 한 번 더 설 뿐이다 */
+  }
+}
