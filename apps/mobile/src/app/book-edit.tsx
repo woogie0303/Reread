@@ -67,7 +67,8 @@ function EditForm({ book }: { book: Book }) {
       await update.mutateAsync({
         title: draft.title.trim(),
         author: draft.author.trim(),
-        pages: Number(draft.pages) || undefined,
+        /** 칸을 비웠으면 지운다 — 빼고 보내면 서버가 예전 쪽수를 그대로 둔다 */
+        pages: Number(draft.pages) || null,
         currentPage: Number(draft.currentPage) || 0,
         genre: draft.genre,
       });

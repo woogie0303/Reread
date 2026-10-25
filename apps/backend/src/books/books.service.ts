@@ -68,15 +68,25 @@ export class BooksService {
     dto: UpdateBookDto,
   ): Promise<BookDocument> {
     const before = await this.find(readerId, id);
-    /** 쪽수를 함께 고치는 중이면 새 쪽수로, 아니면 이미 있는 쪽수로 가린다 */
+    /**
+     * `pages: null`은 '전체 쪽수를 모른다'로 되돌리는 것이다. 빼고 보내면 '안 고침'이라
+     * 둘을 가른다 — 한때 앱이 비운 칸을 빼고 보내서, 쪽수를 지워도 예전 값이 남았다.
+     * (DTO의 타입은 등록과 같이 쓰느라 null을 적지 않는다. `@IsOptional`이 null을 들인다.)
+     */
+    const clearPages = (dto as { pages?: number | null }).pages === null;
+    /** 쪽수를 함께 고치는 중이면 새 쪽수로, 지우는 중이면 따지지 않고, 아니면 있던 쪽수로 */
     assertPageInBook(
-      { pages: dto.pages ?? before.pages },
+      { pages: clearPages ? undefined : (dto.pages ?? before.pages) },
       dto.currentPage || undefined,
     );
     const advanced =
       dto.currentPage !== undefined ? dto.currentPage - before.currentPage : 0;
 
     const patch: Record<string, unknown> = { ...dto };
+    if (clearPages) {
+      delete patch.pages;
+      patch.$unset = { pages: 1 };
+    }
     if (advanced > 0 && !dto.lastReadAt) patch.lastReadAt = new Date();
 
     const book = await this.books.findOneAndUpdate(
