@@ -53,6 +53,13 @@ export function BookHero({
   const ratio =
     progress && measured ? progress.currentPage / progress.totalPages : 0;
   const actionable = Boolean(onAsk || onCapture);
+  /**
+   * 진도 줄에 세울 것이 있는가. 쪽수도 읽은 쪽도 없으면 줄째 그리지 않는다 — 빈 칸을
+   * 두면 판의 간격과 칸의 여백이 남아 표지 아래가 휑하게 벌어졌다.
+   */
+  const hasProgress = progress
+    ? measured || progress.currentPage > 0
+    : Boolean(book.pages);
 
   return (
     <View style={[styles.panel, { paddingHorizontal: inset }]}>
@@ -86,67 +93,59 @@ export function BookHero({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <BookCover
-            book={book}
-            width={130}
-            height={200}
-            radius={10}
-          />
+          <BookCover book={book} width={130} height={200} radius={10} />
         </Tap>
       </View>
 
       {/* 막대가 곧 기록 버튼이다 — 누를 만큼 굵게 둔다 */}
-      <Tap
-        style={styles.progress}
-        onPress={onPressProgress}
-        disabled={!onPressProgress}
-        accessibilityRole={onPressProgress ? 'button' : undefined}
-        accessibilityHint={onPressProgress ? '읽은 쪽 기록하기' : undefined}
-        accessibilityLabel={
-          progress && measured
-            ? `${progress.totalPages}쪽 중 ${progress.currentPage}쪽까지 읽었어요`
-            : progress && progress.currentPage > 0
-              ? `${progress.currentPage}쪽까지 읽었어요`
-              : undefined
-        }
-      >
-        {progress && measured ? (
-          <>
-            <ProgressBar value={ratio} height={8} />
-            {/*
+      {hasProgress ? (
+        <Tap
+          style={styles.progress}
+          onPress={onPressProgress}
+          disabled={!onPressProgress}
+          accessibilityRole={onPressProgress ? 'button' : undefined}
+          accessibilityHint={onPressProgress ? '읽은 쪽 기록하기' : undefined}
+          accessibilityLabel={
+            progress && measured
+              ? `${progress.totalPages}쪽 중 ${progress.currentPage}쪽까지 읽었어요`
+              : progress && progress.currentPage > 0
+                ? `${progress.currentPage}쪽까지 읽었어요`
+                : undefined
+          }
+        >
+          {progress && measured ? (
+            <>
+              <ProgressBar value={ratio} height={8} />
+              {/*
               값이 라벨보다 먼저 읽힌다 — 이 줄에서 알고 싶은 것은 '얼마나 읽었나'이고,
               쪽수는 그 근거다. 한동안 둘이 같은 크기·같은 옅은 색으로 붙어 있었다.
             */}
-            <AppText style={styles.progressLabel}>
-              <AppText style={emphasis()}>
-                {`${Math.round(ratio * 100)}%`}
-              </AppText>
-              {`  p.${progress.currentPage} / ${progress.totalPages}`}
-              {progress.lastReadLabel ? ` · ${progress.lastReadLabel}` : ''}
-            </AppText>
-          </>
-        ) : progress && progress.currentPage > 0 ? (
-          /**
-           * 전체 쪽수를 모르면 비율이 없다 — 읽은 쪽 하나만 사실로 세운다. 막대 없이
-           * 글자로만 두면 진도 줄이 아니라 아무 숫자처럼 읽혀서 배지로 감싼다.
-           */
-          <View style={styles.pageRow}>
-            <Chip label={`p.${progress.currentPage}`} tone="primary" />
-            {progress.lastReadLabel ? (
               <AppText style={styles.progressLabel}>
-                {progress.lastReadLabel}
+                <AppText style={emphasis()}>
+                  {`${Math.round(ratio * 100)}%`}
+                </AppText>
+                {`  p.${progress.currentPage} / ${progress.totalPages}`}
+                {progress.lastReadLabel ? ` · ${progress.lastReadLabel}` : ''}
               </AppText>
-            ) : null}
-          </View>
-        ) : progress ? (
-          /** 쪽수도 읽은 쪽도 없다 — 'p.0'처럼 아무것도 아닌 숫자는 세우지 않는다 */
-          null
-        ) : (
-          <AppText style={styles.progressLabel}>
-            {book.pages ? `${book.pages}p` : ''}
-          </AppText>
-        )}
-      </Tap>
+            </>
+          ) : progress && progress.currentPage > 0 ? (
+            /**
+             * 전체 쪽수를 모르면 비율이 없다 — 읽은 쪽 하나만 사실로 세운다. 막대 없이
+             * 글자로만 두면 진도 줄이 아니라 아무 숫자처럼 읽혀서 배지로 감싼다.
+             */
+            <View style={styles.pageRow}>
+              <Chip label={`p.${progress.currentPage}`} tone="primary" />
+              {progress.lastReadLabel ? (
+                <AppText style={styles.progressLabel}>
+                  {progress.lastReadLabel}
+                </AppText>
+              ) : null}
+            </View>
+          ) : (
+            <AppText style={styles.progressLabel}>{`${book.pages}p`}</AppText>
+          )}
+        </Tap>
+      ) : null}
     </View>
   );
 }
