@@ -16,6 +16,7 @@ import { useDeleteSentence } from '@/entities/sentence/api/sentence.api';
 import { showRewarded } from '@/shared/ads/ads';
 import { color, gutter, type } from '@/shared/config';
 import { savedLabel } from '@/shared/lib/date';
+import { useSession } from '@/shared/session/session';
 import {
   ActionButton,
   AltPanel,
@@ -40,6 +41,12 @@ export default function PendingScreen() {
   const resolve = usePostResolveAsk();
   const remove = useDeleteSentence();
   const claim = usePostAdBonus();
+  /**
+   * 로그인 없이 쓰는 독자는 몫이 작다(약 10번). 그걸 다 쓴 여기가 로그인을 권하는 자리다 —
+   * 더 묻고 싶은 순간이라 왜 로그인하는지가 저절로 설명된다. 광고 대신 로그인을 먼저
+   * 내민다. 로그인하면 정식 몫이 생기고, 기다리던 문장도 그대로 옮겨 간다.
+   */
+  const anonymous = Boolean(useSession().reader?.anonymous);
   const [watching, setWatching] = useState(false);
   const left = quota?.remaining ?? 0;
   /** 하루 몫을 다 받았으면 광고를 보여 주기 전에 막는다 — 보고 나서 거절당하면 헛수고다 */
@@ -137,7 +144,25 @@ export default function PendingScreen() {
           이 앱의 유일한 권유 자리. 이번 달 질문을 다 쓴 독자에게만 선다 —
           남아 있는데 광고를 내밀면 읽는 흐름 속으로 들어온다. (ADR-0003)
         */}
-        {pending.length && left === 0 ? (
+        {pending.length && left === 0 && anonymous ? (
+          <AltPanel style={styles.rewarded}>
+            <View style={styles.rewardedHead}>
+              <Icon name="sparkle" size={15} color={color.primary} />
+              <AppText style={styles.rewardedTitle}>
+                로그인하면 더 물어볼 수 있어요
+              </AppText>
+            </View>
+            <AppText style={styles.rewardedBody}>
+              로그인 없이 쓸 수 있는 질문을 다 썼어요. 로그인하면 이번 달 질문이
+              더 생기고, 지금까지 담은 기록도 그대로 이어져요.
+            </AppText>
+            <ActionButton
+              label="로그인하기"
+              variant="subtle"
+              onPress={() => router.push('/sign-in')}
+            />
+          </AltPanel>
+        ) : pending.length && left === 0 ? (
           <AltPanel style={styles.rewarded}>
             <View style={styles.rewardedHead}>
               <Icon name="sparkle" size={15} color={color.primary} />

@@ -104,7 +104,7 @@ async function appleSignIn(): Promise<SignInResult> {
   const name = credential.fullName;
   return api<SignInResult>('/auth/apple', {
     method: 'POST',
-    anonymous: true,
+    optionalAuth: true,
     body: {
       idToken: credential.identityToken,
       nickname:
@@ -191,8 +191,19 @@ async function browserSignIn(
 
   return api<SignInResult>('/auth/exchange', {
     method: 'POST',
-    anonymous: true,
+    optionalAuth: true,
     body: { ticket, codeVerifier: verifier },
+  });
+}
+
+/**
+ * 로그인 없이 쓰는 독자를 만든다. 질문 몫이 작고, 나중에 로그인하면 여기서 쌓은
+ * 기록이 그 계정으로 옮겨진다 — 로그인하는 세 길이 토큰을 붙여 보내는 이유다.
+ */
+export async function anonymousSignIn(): Promise<SignInResult> {
+  return api<SignInResult>('/auth/anonymous', {
+    method: 'POST',
+    anonymous: true,
   });
 }
 
@@ -203,7 +214,7 @@ export async function reviewSignIn(
 ): Promise<SignInResult> {
   return api<SignInResult>('/auth/review', {
     method: 'POST',
-    anonymous: true,
+    optionalAuth: true,
     body: { username, password },
   });
 }

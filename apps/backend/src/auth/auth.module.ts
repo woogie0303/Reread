@@ -2,11 +2,18 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { Ask, AskSchema } from '../asks/ask.schema';
+import { Book, BookSchema } from '../books/book.schema';
+import { LexicalItem, LexicalItemSchema } from '../items/lexical-item.schema';
+import { ReadingLog, ReadingLogSchema } from '../reading/reading-log.schema';
 import { Reader, ReaderSchema } from '../readers/reader.schema';
+import { Retell, RetellSchema } from '../retells/retell.schema';
+import { Sentence, SentenceSchema } from '../sentences/sentence.schema';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AppleTokenService } from './oauth/apple-token.service';
 import { OAuthSessionService } from './oauth-session.service';
+import { ReaderMergeService } from './reader-merge.service';
 import { OAuthTicket, OAuthTicketSchema } from './schemas/oauth-ticket.schema';
 import {
   RefreshToken,
@@ -20,6 +27,13 @@ import { TokenService } from './token.service';
       { name: Reader.name, schema: ReaderSchema },
       { name: RefreshToken.name, schema: RefreshTokenSchema },
       { name: OAuthTicket.name, schema: OAuthTicketSchema },
+      /** 익명으로 쓰다 로그인하면 그 기록을 옮긴다(`ReaderMergeService`) — 독자의 것이 다 필요하다 */
+      { name: Book.name, schema: BookSchema },
+      { name: Sentence.name, schema: SentenceSchema },
+      { name: LexicalItem.name, schema: LexicalItemSchema },
+      { name: Ask.name, schema: AskSchema },
+      { name: Retell.name, schema: RetellSchema },
+      { name: ReadingLog.name, schema: ReadingLogSchema },
     ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -37,6 +51,7 @@ import { TokenService } from './token.service';
     TokenService,
     OAuthSessionService,
     AppleTokenService,
+    ReaderMergeService,
   ],
   /** 가드가 JwtService를, 다른 모듈이 소유 검사를 위해 이 둘을 쓴다 */
   exports: [JwtModule, AuthService, TokenService, AppleTokenService],

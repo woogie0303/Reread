@@ -55,6 +55,12 @@ type Options = {
   /** 로그인 전에 부르는 길 — 토큰을 붙이지 않는다 */
   anonymous?: boolean;
   /**
+   * 토큰이 있으면 붙이고, 없어도 부르는 길 — 로그인하는 길이다. 익명으로 쓰던 독자가
+   * 로그인하면 그 토큰을 보고 서버가 익명 기록을 옮긴다. 401이 와도 '다시 로그인해
+   * 주세요'로 바꾸지 않는다 — 로그인 중에 나는 401은 서버가 준 이유가 맞는 말이다.
+   */
+  optionalAuth?: boolean;
+  /**
    * 이만큼 기다려도 답이 없으면 그만 기다린다(밀리초). 정하지 않으면 끝없이 기다리는데,
    * 모델을 부르는 길에서는 그것이 몇 분씩 도는 로딩 화면이 된다.
    */
@@ -134,13 +140,22 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const stored = options.anonymous ? null : await readTokens();
   let response = await send(stored?.access);
 
-  if (response.status === 401 && !options.anonymous) {
+  if (options.optionalAuth) {
+    /**
+     * 익명 토큰이 만료돼 막혔으면 새로 받아 다시 보낸다 — 그냥 토큰 없이 보내면 익명
+     * 기록이 옮겨지지 않는다. 새로 받지 못하면(리프레시도 죽음) 토큰 없이라도 로그인은 한다.
+     */
+    if (response.status === 401 && stored) {
+      response = await send(await refresh());
+    }
+  } else if (response.status === 401 && !options.anonymous) {
     const renewed = await refresh();
     if (!renewed) throw new Unauthenticated();
     response = await send(renewed);
+    if (response.status === 401) throw new Unauthenticated();
+  } else if (response.status === 401) {
+    throw new Unauthenticated();
   }
-
-  if (response.status === 401) throw new Unauthenticated();
 
   if (!response.ok) {
     throw new ApiError(response.status, await readMessage(response));

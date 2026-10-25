@@ -47,12 +47,12 @@ export default wrapRoot(RootLayout);
  * 세션이 정해지기 전에는 스플래시를 내리지 않는다 — 잠깐 로그인 화면이
  * 스쳤다가 홈으로 넘어가는 것이 앱이 고장난 것처럼 보이기 때문이다.
  *
- * 처음 온 기기에는 **로그인보다 안내가 먼저** 선다. 무엇을 하는 앱인지 보기도 전에
- * 로그인을 요구하면 거기서 돌아선다 — 안내는 계정이 없어도 볼 수 있는 것이라
- * 문 앞에 세울 이유가 없다.
+ * 처음 온 기기에는 **안내가 먼저** 선다. 그 뒤로는 로그인 없이 들어간다(익명 독자,
+ * `SessionProvider`) — 로그인 화면은 문이 아니라, 익명 독자가 스스로 여는 화면이거나
+ * 이 기기에서 로그인했던 사람이 돌아올 때 서는 화면이다.
  */
 function Gate() {
-  const { status } = useSession();
+  const { status, reader, fresh } = useSession();
   const segments = useSegments();
   const router = useRouter();
 
@@ -96,22 +96,30 @@ function Gate() {
     SplashScreen.hideAsync();
     const at = segments[0];
 
-    if (status === 'in') {
-      /** 들어온 적이 있으면 이번 실행에서는 안내를 다시 고르지 않는다(로그아웃해도) */
+    /**
+     * 안내는 저장된 세션 없이 시작한 실행에서만, 한 번 고른다. 이미 쓰던 독자가
+     * 업데이트했다고 안내를 내밀지 않는다(로그아웃해도 이번 실행에서는 다시 안 고른다).
+     */
+    if (!routed.current) {
       routed.current = true;
-      /** 안내는 되돌리지 않는다 — 마이 탭의 '사용 방법'이 로그인한 채로 여는 화면이다 */
-      if (at === 'sign-in') router.replace('/');
-      return;
+      if (fresh && !seen) {
+        router.replace('/onboarding');
+        return;
+      }
     }
 
-    if (!seen && !routed.current) {
-      routed.current = true;
-      router.replace('/onboarding');
+    if (status === 'in') {
+      /**
+       * 로그인한 독자를 로그인 화면에서 내보낸다. 익명 독자는 그 화면을 스스로 연
+       * 것이라 두고, 로그인하는 순간 `anonymous`가 꺼지며 여기서 홈으로 간다.
+       * 안내는 되돌리지 않는다 — 마이 탭의 '사용 방법'이 들어온 채로 여는 화면이다.
+       */
+      if (at === 'sign-in' && !reader?.anonymous) router.replace('/');
       return;
     }
 
     if (at !== 'sign-in' && at !== 'onboarding') router.replace('/sign-in');
-  }, [status, seen, segments, router]);
+  }, [status, seen, fresh, reader, segments, router]);
 
   return (
     <>

@@ -34,7 +34,9 @@ import { ReminderSettings } from '@/widgets/review-reminder/ui/reminder-settings
 export default function MyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signOut } = useSession();
+  const { signOut, reader: session } = useSession();
+  /** 로그인 없이 쓰는 중 — 로그아웃하면 기록에 다시 닿을 길이 없어서 그 대신 로그인을 권한다 */
+  const anonymous = Boolean(session?.anonymous);
   const deleteAccount = useDeleteAccount();
   const { data: reader } = useGetReader();
   const { data: items = [] } = useGetItems();
@@ -95,6 +97,14 @@ export default function MyScreen() {
         contentContainerStyle={styles.content}
         style={styles.scroll}
       >
+        {anonymous ? (
+          <DisclosureRow
+            title="로그인하기"
+            body="로그인하면 담아둔 기록을 지키고, 다른 기기에서도 이어 볼 수 있어요. 이번 달 질문도 더 생겨요."
+            onPress={() => router.push('/sign-in')}
+          />
+        ) : null}
+
         {/*
           사용량은 늘 보인다 — 숨겼다가 다 썼을 때 처음 보이면 독자는 속았다고 느낀다.
           금액도 횟수도 아니라 쓴 비율로만 말한다(`usagePercent`). 0%에서 시작해 물을
@@ -147,13 +157,15 @@ export default function MyScreen() {
         />
 
         {/* 나가는 문은 쌓인 것들과 한 덩어리로 두지 않는다 */}
-        <View style={styles.exit}>
-          <ActionButton
-            label="로그아웃"
-            variant="subtle"
-            onPress={confirmSignOut}
-          />
-        </View>
+        {anonymous ? null : (
+          <View style={styles.exit}>
+            <ActionButton
+              label="로그아웃"
+              variant="subtle"
+              onPress={confirmSignOut}
+            />
+          </View>
+        )}
 
         {/* 되돌릴 수 없는 일은 눈에 띄는 버튼으로 세우지 않고, 찾으면 닿는 곳에 조용히 둔다 */}
         <Tap

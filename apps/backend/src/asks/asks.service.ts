@@ -262,7 +262,9 @@ export class AsksService {
    */
   async quota(readerId: string): Promise<AskQuota> {
     const now = new Date();
-    const reader = await this.readers.findById(readerId).select('askBonus');
+    const reader = await this.readers
+      .findById(readerId)
+      .select('askBonus accounts');
     const bonus =
       reader?.askBonus?.month === monthKey(now)
         ? (reader.askBonus.credit ?? 0)
@@ -271,8 +273,16 @@ export class AsksService {
       reader?.askBonus?.day === dayKey(now)
         ? (reader.askBonus.dayCount ?? 0)
         : 0;
-    const budget =
-      Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.03) + bonus;
+    /**
+     * 로그인 없이 쓰는 독자는 몫이 작다(기본 약 10번). 앱을 지우고 다시 깔면 익명 독자가
+     * 새로 생겨서, 정식 몫을 주면 재설치만으로 질문을 계속 받을 수 있다. 다 쓰면 앱이
+     * 로그인을 권하고, 로그인하면 정식 몫으로 이어진다(익명 기록은 그 계정으로 옮겨진다).
+     */
+    const anonymous = (reader?.accounts.length ?? 0) === 0;
+    const base = anonymous
+      ? Number(this.config.get('ASK_ANON_BUDGET_USD') ?? 0.002)
+      : Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.006);
+    const budget = base + bonus;
 
     /**
      * 묶음별로 모아 묶음 하나를 한 번으로 센다 — 남은 횟수의 어림값은 '한 번 물을 때
@@ -336,7 +346,7 @@ export class AsksService {
      * 광고 한 번(~₩15–30)이 질문 수십 번 비용을 넘지 않는 선에서 몫을 준다(ADR-0003).
      * 기본값은 기본 모델(Gemma, 질문 한 번 ~$0.0002) 기준이다 — 모델을 바꾸면 이 숫자도 다시 잰다.
      */
-    const perAd = Number(this.config.get('ASK_AD_BONUS_USD') ?? 0.004);
+    const perAd = Number(this.config.get('ASK_AD_BONUS_USD') ?? 0.0004);
     const perDay = this.adsPerDay();
 
     const before = await this.quota(readerId);

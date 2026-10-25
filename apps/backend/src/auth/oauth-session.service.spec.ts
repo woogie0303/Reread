@@ -91,8 +91,11 @@ describe('OAuthSessionService', () => {
   const readerId = new Types.ObjectId().toString();
   let jwt: JwtService;
   let config: { get: jest.Mock };
-  let auth: { configFor: jest.Mock; findOrCreate: jest.Mock; me: jest.Mock };
-  let tokens: { issue: jest.Mock };
+  let auth: {
+    configFor: jest.Mock;
+    findOrCreate: jest.Mock;
+    enter: jest.Mock;
+  };
   let tickets: { create: jest.Mock; findOneAndDelete: jest.Mock };
   let service: OAuthSessionService;
 
@@ -108,17 +111,16 @@ describe('OAuthSessionService', () => {
     auth = {
       configFor: jest.fn(() => ({ clientId: 'id', clientSecret: 'secret' })),
       findOrCreate: jest.fn(() => ({ id: readerId })),
-      me: jest.fn(() => ({
-        id: readerId,
-        nickname: '독자',
-        providers: ['kakao'],
-      })),
-    };
-    tokens = {
-      issue: jest.fn(() => ({
+      enter: jest.fn((id: string) => ({
         accessToken: 'access',
         refreshToken: 'refresh',
         expiresIn: 900,
+        reader: {
+          id,
+          nickname: '독자',
+          providers: ['kakao'],
+          anonymous: false,
+        },
       })),
     };
     tickets = { create: jest.fn(), findOneAndDelete: jest.fn() };
@@ -127,7 +129,6 @@ describe('OAuthSessionService', () => {
       jwt,
       config as unknown as ConfigService,
       auth as never,
-      tokens as never,
       tickets as never,
     );
 
@@ -254,8 +255,25 @@ describe('OAuthSessionService', () => {
         verifier,
       );
 
-      expect(tokens.issue).toHaveBeenCalledWith(readerId);
+      expect(auth.enter).toHaveBeenCalledWith(readerId, undefined);
       expect(result.reader.id).toBe(readerId);
+    });
+
+    it('익명 독자가 함께 왔으면 그 독자를 넘겨 기록을 옮기게 한다', async () => {
+      const anonymousId = new Types.ObjectId().toString();
+      tickets.findOneAndDelete.mockResolvedValue({
+        readerId: { toString: () => readerId },
+        challenge: challengeFrom(verifier),
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+
+      await service.redeem(
+        new Types.ObjectId().toString(),
+        verifier,
+        anonymousId,
+      );
+
+      expect(auth.enter).toHaveBeenCalledWith(readerId, anonymousId);
     });
 
     it('code_verifier가 challenge와 맞지 않으면 거절한다', async () => {

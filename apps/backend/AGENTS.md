@@ -50,6 +50,17 @@ src/
   든 문장에서만 달 수 있어서, 하트 없이 생각이 달린 옛 문장은 지우지 않고 하트를 켠다.
 - **로그인은 카카오·네이버·구글·Apple 넷뿐이다.** 비밀번호를 맡지 않는다. 이메일이
   같다고 다른 제공자 계정을 자동으로 합치지 않는다 — 남의 계정을 넘겨받는 길이 된다.
+- **로그인 없이도 쓴다**(`POST /auth/anonymous`). 소셜 계정이 하나도 없는 독자이고, 토큰
+  두 장을 똑같이 받는다. 다른 점은 질문 몫(`ASK_ANON_BUDGET_USD`, 약 10번)뿐이다 — 앱을
+  다시 깔면 익명 독자가 새로 생겨서 정식 몫을 주면 재설치로 질문을 계속 받을 수 있다. 만드는
+  길은 IP당 한 시간에 10번으로 막는다(`RATE_LIMIT.anonymous`).
+- **익명 독자가 로그인하면 그 기록을 로그인한 계정으로 옮긴다**(`ReaderMergeService`). 로그인하는
+  세 길(`exchange`·`review`·`:provider`)은 토큰이 붙어 오면 받는다(`OptionalJwtAuthGuard`). 붙은
+  토큰이 틀리면 401 — 조용히 무시하면 만료된 익명 토큰으로 로그인할 때 기록이 주인 없이 남는다.
+  새 소셜 계정이면 빈 독자로 옮겨지고, 이미 쓰던 계정이면 합쳐진다. 같은 표현은 만남을 이어
+  붙이고 그 표현을 가리키던 질문·헷갈리는 짝을 돌린다(유일 인덱스가 재회를 만든다). 넘겨주는
+  쪽은 **익명 독자일 때만**이다. **독자가 맡기는 컬렉션을 새로 만들면 계정 삭제와 함께 이
+  서비스에도 넣는다** — 안 넣으면 로그인할 때 그 기록이 두고 와진다.
 - **계정 삭제는 독자 문서를 맨 마지막에 지운다**(`readers/account-deletion.service.ts`).
   몽고가 단일 서버면 트랜잭션이 없어 중간에 끊길 수 있는데, 독자가 먼저 사라지면 남은
   문서가 주인 없이 영영 남고 다시 시도할 길도 없다. 독자가 남아 있으면 같은 요청으로
@@ -59,7 +70,7 @@ src/
   IP로만 세면 통신사 망의 여러 사람이 한 통을 나눠 쓰고, 프록시 설정이 틀리면 모두가 한
   IP가 된다. 독자 id는 **서명을 검증한 토큰에서만** 읽는다 — 검증 없이 `sub`를 믿으면 호출마다
   새 독자를 지어내 한도를 피할 수 있다. 숫자는 `RATE_LIMIT` 한 곳에 있다: 바닥 120/분, 모델을
-  부르는 길(`/asks` 셋) 10/분, 로그인 쪽 20/분, 책 검색 30/분. 총량은 월 질문 한도가 따로
+  부르는 길(`/asks` 셋) 10/분, 로그인 쪽 20/분, 책 검색 30/분, 익명 독자 만들기 10/시간. 총량은 월 질문 한도가 따로
   막으니 둘의 숫자를 맞추려 들지 않는다. 새 길을 만들 때 모델이나 외부 API를 부르면
   `@Throttle({ default: RATE_LIMIT.… })`를 단다.
 - **`TRUST_PROXY`는 틀리면 조용히 망가진다.** 운영 호스팅의 프록시 단 수를 숫자로 적는다
@@ -125,15 +136,17 @@ ASK_MODEL=                         비우면 공급자의 기본 모델(Gemma 4 
 CLOUDFLARE_ACCOUNT_ID=             cloudflare일 때 — Workers AI 페이지의 Account ID
 CLOUDFLARE_API_TOKEN=              cloudflare일 때 — 'Workers AI' 토큰(Read + Edit)
 ANTHROPIC_API_KEY=                 anthropic일 때
-ASK_MONTHLY_BUDGET_USD=0.03        한 달에 쓸 수 있는 모델 비용(달러)
+ASK_MONTHLY_BUDGET_USD=0.006       한 달에 쓸 수 있는 모델 비용(달러) — 질문 1번 $0.0002로 약 30번
+ASK_ANON_BUDGET_USD=0.002          로그인 없이 쓰는 독자의 한 달 몫 — 약 10번. 다 쓰면 앱이 로그인을 권한다
 ASK_TYPICAL_COST_USD=0.0002        아직 몇 번 안 물은 독자의 '약 N번' 어림에 쓰는 질문 1번 비용
-ASK_AD_BONUS_USD=0.004             광고 한 번이 주는 사용량
+ASK_AD_BONUS_USD=0.0004            광고 한 번이 주는 사용량 — 약 2번
 ASK_AD_DAILY_LIMIT=3               하루에 받을 수 있는 광고 횟수
 ```
 
 ## 길
 
-로그인 셋을 뺀 나머지는 전부 `Authorization: Bearer <액세스 토큰>`이 필요하다.
+로그인하는 길과 익명 독자 만들기를 뺀 나머지는 전부 `Authorization: Bearer <액세스 토큰>`이
+필요하다. 로그인하는 길은 토큰이 있으면 받는다 — 익명 독자의 것이면 그 기록을 옮긴다.
 
 로그인은 둘로 갈린다. Apple은 `/auth/apple`이 옛 방식 그대로 identityToken을
 대조해 토큰 두 장을 바로 준다. 카카오·네이버·구글은 브라우저 동의 화면을
@@ -143,6 +156,7 @@ ASK_AD_DAILY_LIMIT=3               하루에 받을 수 있는 광고 횟수
 토큰을 받는다(`auth/oauth-session.service.ts`).
 
 ```
+POST   /api/auth/anonymous        로그인 없이 쓰는 독자를 만들어 토큰 두 장 — 몫이 작다
 POST   /api/auth/apple            identityToken을 대조해 토큰 두 장 — Apple만 이 문을 쓴다
 GET    /api/auth/:provider/start  kakao | naver | google — 동의 화면으로 302. ?challenge=&returnUrl=
 GET    /api/auth/:provider/callback  provider가 돌아오는 곳. returnUrl?ticket=…&state=… 로 302

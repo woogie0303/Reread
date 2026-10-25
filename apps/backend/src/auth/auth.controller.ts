@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentReader } from '../common/current-reader.decorator';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
+import { JwtAuthGuard, OptionalJwtAuthGuard } from '../common/jwt-auth.guard';
 import {
   PROVIDERS as PROVIDER_NAMES,
   type ProviderName,
@@ -47,6 +47,10 @@ const ProviderEnum = Object.fromEntries(
  * 브라우저 동의 화면을 거친다 — `start`가 그 화면을 열고, provider가
  * `callback`으로 돌아오면 앱의 딥링크로 1회용 티켓을 실어 돌려보내고,
  * 앱은 `exchange`로 그 티켓을 진짜 토큰과 바꾼다(`OAuthSessionService`).
+ *
+ * 로그인 없이 쓰는 독자도 있다(`anonymous`). 그 독자가 로그인할 때는 익명 토큰을
+ * 붙여 오므로, 로그인하는 세 길(`exchange`·`review`·`:provider`)은 토큰을 받되 없어도
+ * 들인다(`OptionalJwtAuthGuard`). 붙어 오면 익명으로 쌓은 기록을 그 계정으로 옮긴다.
  */
 @Controller('auth')
 export class AuthController {
@@ -69,11 +73,26 @@ export class AuthController {
     await this.tokens.revoke(dto.refreshToken);
   }
 
+  @Throttle({ default: RATE_LIMIT.anonymous })
+  @Post('anonymous')
+  @HttpCode(200)
+  anonymous() {
+    return this.auth.anonymous();
+  }
+
   @Throttle({ default: RATE_LIMIT.auth })
   @Post('exchange')
   @HttpCode(200)
-  exchange(@Body() dto: TicketExchangeDto) {
-    return this.oauthSession.redeem(dto.ticket, dto.codeVerifier);
+  @UseGuards(OptionalJwtAuthGuard)
+  exchange(
+    @Body() dto: TicketExchangeDto,
+    @CurrentReader() anonymousId: string,
+  ) {
+    return this.oauthSession.redeem(
+      dto.ticket,
+      dto.codeVerifier,
+      anonymousId || undefined,
+    );
   }
 
   @Get('me')
@@ -91,8 +110,16 @@ export class AuthController {
   @Throttle({ default: RATE_LIMIT.auth })
   @Post('review')
   @HttpCode(200)
-  reviewSignIn(@Body() dto: ReviewSignInDto) {
-    return this.auth.reviewSignIn(dto.username, dto.password);
+  @UseGuards(OptionalJwtAuthGuard)
+  reviewSignIn(
+    @Body() dto: ReviewSignInDto,
+    @CurrentReader() anonymousId: string,
+  ) {
+    return this.auth.reviewSignIn(
+      dto.username,
+      dto.password,
+      anonymousId || undefined,
+    );
   }
 
   @Throttle({ default: RATE_LIMIT.auth })
@@ -120,10 +147,12 @@ export class AuthController {
   @Throttle({ default: RATE_LIMIT.auth })
   @Post(':provider')
   @HttpCode(200)
+  @UseGuards(OptionalJwtAuthGuard)
   signIn(
     @Param('provider', new ParseEnumPipe(ProviderEnum)) provider: ProviderName,
     @Body() dto: ExchangeCodeDto,
+    @CurrentReader() anonymousId: string,
   ) {
-    return this.auth.signIn(provider, dto);
+    return this.auth.signIn(provider, dto, anonymousId || undefined);
   }
 }

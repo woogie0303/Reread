@@ -28,6 +28,12 @@ export const RATE_LIMIT = {
   auth: { limit: 20, ttl: 60_000 },
   /** 외부 검색 — Open Library는 서버 전체에 초당 한 건만 받아준다 */
   search: { limit: 30, ttl: 60_000 },
+  /**
+   * 익명 독자 만들기 — 독자마다 질문 몫이 생겨서 마구 만들면 그만큼 모델 비용이 열린다.
+   * 앱을 처음 열 때 한 번이라 한 시간에 몇 번이면 넉넉하다. 통신사 망은 여러 사람이
+   * 한 IP를 나눠 쓰니 너무 조이지는 않는다.
+   */
+  anonymous: { limit: 10, ttl: 60 * 60_000 },
 } as const;
 
 export const RATE_LIMIT_MESSAGE =

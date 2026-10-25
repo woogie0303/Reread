@@ -39,6 +39,8 @@ export type ReaderView = {
   profileImage?: string;
   booksFinished: number;
   providers: ProviderName[];
+  /** 로그인 없이 쓰는 중 — 질문 몫이 작고, 로그인을 권하는 자리가 이걸로 갈린다 */
+  anonymous: boolean;
 };
 
 export type Tokens = {

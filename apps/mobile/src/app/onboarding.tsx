@@ -6,11 +6,11 @@ import { markOnboardingSeen } from '@/widgets/onboarding/model/seen';
 import { Onboarding } from '@/widgets/onboarding/ui/onboarding';
 
 /**
- * 첫 실행 안내. 처음 온 기기에는 **로그인보다 먼저** 서고(`_layout`의 `Gate`), 그 밖에는
+ * 첫 실행 안내. 처음 온 기기에는 앱이 열리자마자 서고(`_layout`의 `Gate`), 그 밖에는
  * 마이 탭에서 들어온다.
  *
- * 끝내거나 건너뛰면 온 자리로 돌아간다 — 아직 로그인 전이면 돌아갈 자리가 없으므로
- * 로그인으로 보낸다.
+ * 끝내거나 건너뛰면 온 자리로 돌아간다. 처음 열려서 돌아갈 자리가 없으면 — 익명으로
+ * 들어갔으면 홈, 이 기기에서 로그인했던 사람이면 로그인으로 간다.
  */
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -20,7 +20,8 @@ export default function OnboardingScreen() {
   const finish = useCallback(async () => {
     await markOnboardingSeen();
     if (status === 'out') router.replace('/sign-in');
-    else router.back();
+    else if (router.canGoBack()) router.back();
+    else router.replace('/');
   }, [status, router]);
 
   return <Onboarding onFinish={finish} />;

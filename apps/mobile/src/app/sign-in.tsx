@@ -19,11 +19,13 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 
 import type { ProviderName } from '@/shared/api/types';
 import { color, gutter, type } from '@/shared/config';
+import { readLastProvider } from '@/shared/session/last-provider';
 import {
   configured,
   isReviewModeEnabled,
@@ -31,7 +33,7 @@ import {
   SignInFailed,
 } from '@/shared/session/oauth';
 import { useSession } from '@/shared/session/session';
-import { AppText, BRAND, BrandLogo, Mark, Tap } from '@/shared/ui';
+import { AppText, BRAND, BrandLogo, Icon, Mark, Tap } from '@/shared/ui';
 
 /**
  * 한국 독자가 가장 많이 쓰는 순서. Apple은 크기와 자리가 다른 것과 같아야 한다 —
@@ -46,10 +48,21 @@ const PROVIDERS: ProviderName[] = ['kakao', 'naver', 'google', 'apple'];
  * 버튼은 글자 없이 로고만 둔다. 넷을 "○○로 계속하기"로 쌓으면 화면 아래 절반이
  * 버튼으로 차서, 위의 문장(이 앱이 무엇인지)보다 버튼이 먼저 읽힌다. 로고는
  * 모두 알아보는 모양이라 글자가 없어도 뜻이 선다 — 스크린리더에는 이름을 준다.
+ *
+ * 두 길로 온다. **로그인 없이 쓰던 독자가 스스로 열었으면** 닫고 돌아갈 수 있고,
+ * 로그인하면 쓰던 기록이 그 계정으로 옮겨진다. **이 기기에서 로그인했던 사람이
+ * 돌아왔으면** 문처럼 선다 — 익명으로 들어가면 원래 계정과 따로 노는 기록이 생긴다.
+ *
+ * 지난번에 쓴 버튼 위에는 '최근 로그인'을 띄운다. 넷 중 무엇으로 가입했는지 잊고 다른
+ * 버튼을 누르면 빈 계정이 새로 생긴다.
  */
 export default function SignInScreen() {
   const insets = useSafeAreaInsets();
-  const { signIn, reviewSignIn, problem } = useSession();
+  const router = useRouter();
+  const { status, reader, signIn, reviewSignIn, problem } = useSession();
+  /** 익명으로 쓰다 스스로 연 화면 — 닫고 돌아갈 수 있다 */
+  const browsing = status === 'in' && Boolean(reader?.anonymous);
+  const [recent, setRecent] = useState<ProviderName | null>(null);
   const [reviewMode, setReviewMode] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewUsername, setReviewUsername] = useState('');
@@ -58,6 +71,7 @@ export default function SignInScreen() {
 
   useEffect(() => {
     isReviewModeEnabled().then(setReviewMode);
+    readLastProvider().then(setRecent);
   }, []);
 
   const onSignInError = (error: Error) => {
@@ -88,6 +102,18 @@ export default function SignInScreen() {
         { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
       ]}
     >
+      {browsing ? (
+        <Tap
+          hitSlop={12}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+          style={[styles.close, { top: insets.top + 6 }]}
+        >
+          <Icon name="close" size={20} color={color.text.primary} />
+        </Tap>
+      ) : null}
+
       <View style={styles.head}>
         <Mascot />
         <Animated.View
@@ -96,7 +122,9 @@ export default function SignInScreen() {
         >
           <AppText style={styles.wordmark}>Reread</AppText>
           <AppText style={styles.blurb}>
-            책을 읽다 막힌 문장, 여기에 두고 가세요
+            {browsing
+              ? '로그인하면 담아둔 기록을\n다른 기기에서도 이어 볼 수 있어요'
+              : '책을 읽다 막힌 문장, 여기에 두고 가세요'}
           </AppText>
         </Animated.View>
       </View>
@@ -127,12 +155,17 @@ export default function SignInScreen() {
               key={name}
               name={name}
               ready={configured(name)}
+              recent={recent === name}
               loading={providerMutation.isPending && providerMutation.variables === name}
-              locked={(providerMutation.isPending && providerMutation.variables !== name) || reviewMutation.isPending}
+              locked={
+                (providerMutation.isPending && providerMutation.variables !== name) ||
+                reviewMutation.isPending
+              }
               onPress={() => providerMutation.mutate(name)}
             />
           ))}
         </View>
+
       </View>
 
       {reviewMode ? (
@@ -270,12 +303,15 @@ function Mascot() {
 function ProviderButton({
   name,
   ready,
+  recent,
   loading,
   locked,
   onPress,
 }: {
   name: ProviderName;
   ready: boolean;
+  /** 이 기기에서 지난번에 쓴 제공자 */
+  recent: boolean;
   loading: boolean;
   /** 다른 제공자로 로그인하는 중 — 두 창이 겹쳐 뜨지 않게 막는다 */
   locked: boolean;
@@ -287,27 +323,36 @@ function ProviderButton({
   const spinner = name === 'naver' || name === 'apple' ? '#FFFFFF' : '#000000';
 
   return (
-    <Tap
-      onPress={onPress}
-      disabled={off}
-      accessibilityRole="button"
-      accessibilityLabel={
-        ready ? `${brand.label}로 로그인` : `${brand.label}로 로그인, 준비 중`
-      }
-      accessibilityState={{ disabled: off, busy: loading }}
-      style={[
-        styles.circle,
-        { backgroundColor: brand.background },
-        brand.border ? { borderWidth: 1, borderColor: brand.border } : null,
-        !ready ? styles.unready : null,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator color={spinner} />
-      ) : (
-        <BrandLogo name={name} />
-      )}
-    </Tap>
+    <View style={styles.slot}>
+      {/* 버튼 위에 얹는다 — 줄에 끼우면 이 버튼만 아래로 밀려 넷의 높이가 어긋난다 */}
+      {recent ? (
+        <View style={styles.recent} pointerEvents="none">
+          <AppText style={styles.recentLabel}>최근 로그인</AppText>
+        </View>
+      ) : null}
+      <Tap
+        onPress={onPress}
+        disabled={off}
+        accessibilityRole="button"
+        accessibilityLabel={
+          (ready ? `${brand.label}로 로그인` : `${brand.label}로 로그인, 준비 중`) +
+          (recent ? ', 최근에 쓴 방법' : '')
+        }
+        accessibilityState={{ disabled: off, busy: loading }}
+        style={[
+          styles.circle,
+          { backgroundColor: brand.background },
+          brand.border ? { borderWidth: 1, borderColor: brand.border } : null,
+          !ready ? styles.unready : null,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={spinner} />
+        ) : (
+          <BrandLogo name={name} />
+        )}
+      </Tap>
+    </View>
   );
 }
 
@@ -363,7 +408,8 @@ const styles = StyleSheet.create({
   },
   dividerText: { ...type.caption1, color: color.text.secondary },
 
-  row: { flexDirection: 'row', justifyContent: 'center', gap: 18 },
+  /** 위 여백은 '최근 로그인' 표시가 '간편 로그인' 줄에 닿지 않을 만큼 */
+  row: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 10 },
   circle: {
     width: CIRCLE,
     height: CIRCLE,
@@ -373,6 +419,24 @@ const styles = StyleSheet.create({
   },
   /** 아직 쓸 수 없는 것 — 브랜드 색은 지키되 흐리게 */
   unready: { opacity: 0.32 },
+
+  slot: { alignItems: 'center' },
+  /** 버튼 바로 위, 가운데. 글이 버튼보다 넓어도 버튼 축에 맞춰 선다 */
+  recent: {
+    position: 'absolute',
+    bottom: CIRCLE + 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: color.primary,
+  },
+  recentLabel: {
+    ...type.caption2,
+    fontWeight: '600',
+    color: color.text.onInk,
+  },
+
+  close: { position: 'absolute', left: gutter, zIndex: 1 },
 
   reviewLoginBtn: {
     height: 52,

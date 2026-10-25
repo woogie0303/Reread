@@ -9,10 +9,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { createHash } from 'node:crypto';
 import { Model, Types } from 'mongoose';
 import type { ProviderName } from '../readers/reader.schema';
-import { AuthService, type ReaderView } from './auth.service';
+import { AuthService, type SignInResult } from './auth.service';
 import { PROVIDERS } from './oauth';
 import { OAuthTicket } from './schemas/oauth-ticket.schema';
-import { TokenService, type IssuedTokens } from './token.service';
 
 type StateClaims = {
   provider: ProviderName;
@@ -44,7 +43,6 @@ export class OAuthSessionService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly auth: AuthService,
-    private readonly tokens: TokenService,
     @InjectModel(OAuthTicket.name)
     private readonly tickets: Model<OAuthTicket>,
   ) {}
@@ -133,7 +131,8 @@ export class OAuthSessionService {
   async redeem(
     ticketId: string,
     codeVerifier: string,
-  ): Promise<IssuedTokens & { reader: ReaderView }> {
+    anonymousId?: string,
+  ): Promise<SignInResult> {
     if (!Types.ObjectId.isValid(ticketId)) {
       throw new UnauthorizedException(
         '로그인이 만료됐어요. 다시 시도해 주세요.',
@@ -150,10 +149,7 @@ export class OAuthSessionService {
       throw new UnauthorizedException('이 로그인을 시작한 기기가 아니에요.');
     }
 
-    const readerId = ticket.readerId.toString();
-    const issued = await this.tokens.issue(readerId);
-    const reader = await this.auth.me(readerId);
-    return { ...issued, reader };
+    return this.auth.enter(ticket.readerId.toString(), anonymousId);
   }
 
   private async issueTicket(

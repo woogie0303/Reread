@@ -15,6 +15,7 @@ import {
 import { PROVIDERS, type OAuthProfile, type ProviderConfig } from './oauth';
 import type { ExchangeCodeDto } from './dto/auth.dto';
 import { AppleTokenService } from './oauth/apple-token.service';
+import { ReaderMergeService } from './reader-merge.service';
 import { TokenService, type IssuedTokens } from './token.service';
 
 export type ReaderView = {
@@ -24,7 +25,12 @@ export type ReaderView = {
   profileImage?: string;
   booksFinished: number;
   providers: ProviderName[];
+  /** 소셜 계정이 하나도 없다 — 로그인 없이 쓰는 중. 앱이 로그인을 권할지 이걸로 안다 */
+  anonymous: boolean;
 };
+
+/** 로그인 없이 들어온 독자의 이름. 로그인하면 소셜 계정의 이름으로 바뀐다 */
+const ANONYMOUS_NICKNAME = '독자';
 
 export type SignInResult = IssuedTokens & { reader: ReaderView };
 
@@ -35,7 +41,30 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly config: ConfigService,
     private readonly appleToken: AppleTokenService,
+    private readonly merge: ReaderMergeService,
   ) {}
+
+  /**
+   * `POST /auth/anonymous` — 로그인 없이 쓰는 독자를 만든다. 소셜 계정이 없을 뿐 다른
+   * 독자와 똑같이 토큰 두 장을 받고, 질문 몫만 작다(`AsksService.quota`). 나중에
+   * 로그인하면 이 독자의 기록이 그 계정으로 옮겨진다(`enter`).
+   */
+  async anonymous(): Promise<SignInResult> {
+    const reader = await this.readers.create({ nickname: ANONYMOUS_NICKNAME });
+    const issued = await this.tokens.issue(reader.id);
+    return { ...issued, reader: toView(reader) };
+  }
+
+  /**
+   * 소셜 계정의 독자로 들어간다. 익명으로 쓰던 독자가 함께 왔으면(그 토큰을 붙여
+   * 로그인했으면) 먼저 그 기록을 옮겨 둔다 — 옮기지 않고 들어가면 익명으로 담은 것이
+   * 주인 없이 남는다.
+   */
+  async enter(readerId: string, anonymousId?: string): Promise<SignInResult> {
+    if (anonymousId) await this.merge.absorb(anonymousId, readerId);
+    const issued = await this.tokens.issue(readerId);
+    return { ...issued, reader: await this.me(readerId) };
+  }
 
   /**
    * `POST /auth/:provider` — 이제 사실상 Apple 전용이다. Apple의 iOS 시스템
@@ -46,6 +75,7 @@ export class AuthService {
   async signIn(
     provider: ProviderName,
     dto: ExchangeCodeDto,
+    anonymousId?: string,
   ): Promise<SignInResult> {
     const config = this.configFor(provider);
     const impl = PROVIDERS[provider];
@@ -67,9 +97,7 @@ export class AuthService {
         dto.authorizationCode,
       );
     }
-    const issued = await this.tokens.issue(reader.id);
-
-    return { ...issued, reader: toView(reader) };
+    return this.enter(reader.id, anonymousId);
   }
 
   /**
@@ -98,6 +126,7 @@ export class AuthService {
   async reviewSignIn(
     username: string,
     password: string,
+    anonymousId?: string,
   ): Promise<SignInResult> {
     const enabled = this.config.get<string>('IS_APPLE_REVIEW') === 'true';
     if (!enabled) throw new UnauthorizedException('심사 모드가 꺼져 있어요.');
@@ -116,8 +145,7 @@ export class AuthService {
       providerId: 'review-account-reread-001',
       nickname: '심사용 계정',
     });
-    const issued = await this.tokens.issue(reader.id);
-    return { ...issued, reader: toView(reader) };
+    return this.enter(reader.id, anonymousId);
   }
 
   isReviewEnabled(): boolean {
@@ -197,5 +225,6 @@ export function toView(reader: ReaderDocument): ReaderView {
     profileImage: reader.profileImage,
     booksFinished: reader.booksFinished,
     providers: reader.accounts.map((account) => account.provider),
+    anonymous: reader.accounts.length === 0,
   };
 }
