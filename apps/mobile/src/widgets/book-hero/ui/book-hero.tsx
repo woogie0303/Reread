@@ -139,13 +139,8 @@ export function BookHero({
             ) : null}
           </View>
         ) : progress ? (
-          /**
-           * 쪽수도 읽은 쪽도 없다 — 'p.0'은 보이지 않는다. 다만 이 줄이 곧 진도를 적는
-           * 버튼이라 비워 두면 기록할 길이 사라진다. 누를 수 있을 때만 그 일을 말한다.
-           */
-          onPressProgress ? (
-            <AppText style={styles.progressLabel}>읽은 쪽 기록하기</AppText>
-          ) : null
+          /** 쪽수도 읽은 쪽도 없다 — 'p.0'처럼 아무것도 아닌 숫자는 세우지 않는다 */
+          null
         ) : (
           <AppText style={styles.progressLabel}>
             {book.pages ? `${book.pages}p` : ''}
