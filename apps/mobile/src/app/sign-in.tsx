@@ -326,8 +326,14 @@ function ProviderButton({
     <View style={styles.slot}>
       {/* 버튼 위에 얹는다 — 줄에 끼우면 이 버튼만 아래로 밀려 넷의 높이가 어긋난다 */}
       {recent ? (
-        <View style={styles.recent} pointerEvents="none">
-          <AppText style={styles.recentLabel}>최근 로그인</AppText>
+        <View style={styles.recentRail} pointerEvents="none">
+          <View style={styles.recent}>
+            <AppText style={styles.recentLabel} numberOfLines={1}>
+              최근 로그인
+            </AppText>
+          </View>
+          {/* 말풍선 꼬리 — 아래 버튼을 가리킨다 */}
+          <View style={styles.recentTail} />
         </View>
       ) : null}
       <Tap
@@ -409,7 +415,7 @@ const styles = StyleSheet.create({
   dividerText: { ...type.caption1, color: color.text.secondary },
 
   /** 위 여백은 '최근 로그인' 표시가 '간편 로그인' 줄에 닿지 않을 만큼 */
-  row: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 10 },
+  row: { flexDirection: 'row', justifyContent: 'center', gap: 18, paddingTop: 16 },
   circle: {
     width: CIRCLE,
     height: CIRCLE,
@@ -421,14 +427,32 @@ const styles = StyleSheet.create({
   unready: { opacity: 0.32 },
 
   slot: { alignItems: 'center' },
-  /** 버튼 바로 위, 가운데. 글이 버튼보다 넓어도 버튼 축에 맞춰 선다 */
-  recent: {
+  /**
+   * 버튼 바로 위, 가운데. 절대 위치로 띄운 것은 부모(버튼 폭 56) 안에서 줄을 바꿔서
+   * '최근 로/그인'으로 꺾였다 — 양옆으로 넓힌 칸에 얹고 그 가운데에 세운다.
+   */
+  recentRail: {
     position: 'absolute',
-    bottom: CIRCLE + 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 999,
+    bottom: CIRCLE + 4,
+    left: -30,
+    right: -30,
+    alignItems: 'center',
+  },
+  /** 말풍선 몸통. 꼬리보다 위에 그려야 꼬리의 윗모서리가 보이지 않는다 */
+  recent: {
+    zIndex: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
     backgroundColor: color.primary,
+  },
+  /** 같은 색 정사각형을 45도 돌려 아랫모서리만 드러낸다 */
+  recentTail: {
+    width: 8,
+    height: 8,
+    marginTop: -5,
+    backgroundColor: color.primary,
+    transform: [{ rotate: '45deg' }],
   },
   recentLabel: {
     ...type.caption2,

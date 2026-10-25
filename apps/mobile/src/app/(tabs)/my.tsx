@@ -5,7 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGetAskQuota } from '@/entities/ask/api/ask.api';
 import { usagePercent } from '@/entities/ask/lib/quota';
 import { useGetItems } from '@/entities/lexical-item/api/item.api';
-import { useDeleteAccount, useGetReader } from '@/entities/reader/api/reader.api';
+import {
+  useDeleteAccount,
+  useGetReader,
+} from '@/entities/reader/api/reader.api';
 import { useGetReadingWeek } from '@/entities/reading/api/reading.api';
 import { PRIVACY_POLICY_URL, color, gutter, type } from '@/shared/config';
 import { useSession } from '@/shared/session/session';
@@ -104,7 +107,7 @@ export default function MyScreen() {
         {anonymous ? (
           <DisclosureRow
             title="로그인하기"
-            body="로그인하면 담아둔 기록을 지키고, 다른 기기에서도 이어 볼 수 있어요. 이번 달 질문도 더 생겨요."
+            body="로그인하면 담아둔 기록을 지키고, 이번 달 질문도 더 생겨요."
             onPress={() => router.push('/sign-in')}
           />
         ) : null}
@@ -189,17 +192,6 @@ export default function MyScreen() {
             </AppText>
           </Tap>
         )}
-
-        {/* 개발 빌드에서만 — 캐릭터 9개를 한 번에 확인하는 자리, 출시에는 안 나간다 */}
-        {__DEV__ ? (
-          <View style={styles.exit}>
-            <ActionButton
-              label="캐릭터 9개 보기 (dev)"
-              variant="subtle"
-              onPress={() => router.push('/dev-marks')}
-            />
-          </View>
-        ) : null}
       </ScrollView>
     </View>
   );
@@ -232,7 +224,6 @@ const styles = StyleSheet.create({
   quotaLabel: { ...type.label2, fontWeight: '700', color: color.text.primary },
   quotaValue: { ...type.label2, color: color.text.meta },
   quotaHint: { ...type.caption2, color: color.text.secondary, flex: 1 },
-
 
   statsPanel: { padding: 18, gap: 14 },
   row: {
