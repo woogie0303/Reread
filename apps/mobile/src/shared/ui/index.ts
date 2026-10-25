@@ -3,6 +3,7 @@ export { AddButton } from './add-button';
 export { AskingOverlay } from './asking-overlay';
 export { BRAND, BrandLogo } from './brand-logo';
 export { Card, AltPanel } from './card';
+export { NoticePanel } from './notice-panel';
 export { CountBadge } from './count-badge';
 export { DisclosureRow } from './disclosure-row';
 export { Checkbox } from './checkbox';

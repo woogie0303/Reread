@@ -1,13 +1,23 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useGetAskQuota, usePostAsk } from '@/entities/ask/api/ask.api';
 import { explainAskError } from '@/entities/ask/lib/explain-error';
 import { useGetBook, useCurrentBook } from '@/entities/book/api/book.api';
 import { usePatchProgress } from '@/entities/reading/api/reading.api';
+import {
+  isAnonymousLimit,
+  offerSignIn,
+} from '@/entities/sentence/lib/anonymous-limit';
 import { usePostSentence } from '@/entities/sentence/api/sentence.api';
 import { color, gutter, ink, type } from '@/shared/config';
 import {
@@ -308,6 +318,10 @@ export default function ScanScreen() {
         params: { id: book.id, tab: 'liked' },
       });
     } catch (error) {
+      if (isAnonymousLimit(error)) {
+        offerSignIn(() => router.push('/sign-in'));
+        return;
+      }
       Alert.alert('담지 못했어요', error instanceof Error ? error.message : '');
     }
   };

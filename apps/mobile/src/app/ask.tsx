@@ -16,6 +16,10 @@ import { usagePercent } from '@/entities/ask/lib/quota';
 import { useGetBook, useCurrentBook } from '@/entities/book/api/book.api';
 import { usePatchProgress } from '@/entities/reading/api/reading.api';
 import {
+  isAnonymousLimit,
+  offerSignIn,
+} from '@/entities/sentence/lib/anonymous-limit';
+import {
   usePostSentence,
   useGetSentence,
 } from '@/entities/sentence/api/sentence.api';
@@ -197,6 +201,10 @@ export default function AskScreen() {
         params: { id: book.id, tab: 'liked' },
       });
     } catch (error) {
+      if (isAnonymousLimit(error)) {
+        offerSignIn(() => router.push('/sign-in'));
+        return;
+      }
       Alert.alert('담지 못했어요', error instanceof Error ? error.message : '');
     }
   };

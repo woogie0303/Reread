@@ -10,21 +10,13 @@ import {
   usePostResolveAsk,
 } from '@/entities/ask/api/ask.api';
 import { explainAskError } from '@/entities/ask/lib/explain-error';
-import { usagePercent } from '@/entities/ask/lib/quota';
 import { toBook } from '@/entities/book/api/book.api';
 import { useDeleteSentence } from '@/entities/sentence/api/sentence.api';
 import { showRewarded } from '@/shared/ads/ads';
-import { color, gutter, type } from '@/shared/config';
+import { color, gutter } from '@/shared/config';
 import { savedLabel } from '@/shared/lib/date';
 import { useSession } from '@/shared/session/session';
-import {
-  ActionButton,
-  AltPanel,
-  AppText,
-  AskingOverlay,
-  Icon,
-  ScreenHeader,
-} from '@/shared/ui';
+import { AskingOverlay, NoticePanel, ScreenHeader } from '@/shared/ui';
 import { PendingList } from '@/widgets/pending-asks/ui/pending-list';
 
 /**
@@ -42,7 +34,7 @@ export default function PendingScreen() {
   const remove = useDeleteSentence();
   const claim = usePostAdBonus();
   /**
-   * 로그인 없이 쓰는 독자는 몫이 작다(약 10번). 그걸 다 쓴 여기가 로그인을 권하는 자리다 —
+   * 로그인 없이 쓰는 독자는 몫이 작다(약 5번). 그걸 다 쓴 여기가 로그인을 권하는 자리다 —
    * 더 묻고 싶은 순간이라 왜 로그인하는지가 저절로 설명된다. 광고 대신 로그인을 먼저
    * 내민다. 로그인하면 정식 몫이 생기고, 기다리던 문장도 그대로 옮겨 간다.
    */
@@ -51,7 +43,6 @@ export default function PendingScreen() {
   const left = quota?.remaining ?? 0;
   /** 하루 몫을 다 받았으면 광고를 보여 주기 전에 막는다 — 보고 나서 거절당하면 헛수고다 */
   const adsExhausted = quota?.adsLeftToday === 0;
-  const oldest = pending[pending.length - 1];
 
   /**
    * 하나를 골라 다시 묻는다. 답이 오면 그 문장 화면을 뜻을 편 채로 연다 — 표현을
@@ -127,6 +118,46 @@ export default function PendingScreen() {
     }
   }
 
+  /** 마지막 하나를 풀고 나면 0개가 된다 — 그때 '0개가 기다린다'고 하지 않는다 */
+  const notice = !pending.length
+    ? {
+        title: '기다리는 문장이 없어요',
+        body: '담아둔 문장은 모두 풀렸어요.',
+      }
+    : left > 0
+      ? {
+          title: `문장 ${pending.length}개가 답을 기다리고 있어요`,
+          /**
+           * 무엇을 하면 되는지를 말한다 — 한동안 아래에 '가장 오래 기다린 문장부터' 버튼이
+           * 있었는데, 광고로 질문을 받은 뒤 그 버튼을 또 눌러야 해서 무엇을 묻는지가
+           * 흐려졌다. 독자가 묻고 싶은 문장을 직접 고른다.
+           */
+          body: '묻고 싶은 문장을 눌러서 물어보세요.',
+        }
+      : anonymous
+        ? {
+            title: '로그인하면 더 물어볼 수 있어요',
+            body: '로그인 없이 쓸 수 있는 질문을 다 썼어요. 로그인하면 이번 달 질문이 더 생기고, 지금까지 담은 기록도 그대로 이어져요.',
+            action: {
+              label: '로그인하기',
+              onPress: () => router.push('/sign-in'),
+            },
+          }
+        : {
+            title: '지금 바로 풀고 싶다면',
+            body: adsExhausted
+              ? '오늘 받을 수 있는 광고 보상을 모두 받았어요. 내일 다시 받을 수 있어요.'
+              : '광고를 보면 문장을 더 물어볼 수 있어요.',
+            action: {
+              label: adsExhausted
+                ? '오늘 보상을 모두 받았어요'
+                : '광고 보고 질문 받기',
+              loading: watching,
+              disabled: adsExhausted,
+              onPress: watchAd,
+            },
+          };
+
   return (
     <View style={styles.screen}>
       <ScreenHeader
@@ -137,73 +168,19 @@ export default function PendingScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        /* 아래 버튼이 없어서 홈 인디케이터만큼은 목록이 직접 비켜 준다 */
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
         style={styles.scroll}
       >
         {/*
-          이 앱의 유일한 권유 자리. 이번 달 질문을 다 쓴 독자에게만 선다 —
-          남아 있는데 광고를 내밀면 읽는 흐름 속으로 들어온다. (ADR-0003)
+          안내는 하나만 선다 — 질문을 다 썼으면 광고(익명이면 로그인), 남았으면 '눌러서
+          물어보세요'. 이 앱의 유일한 권유 자리다: 질문이 남아 있는데 광고를 내밀면 읽는 흐름
+          속으로 들어온다. (ADR-0003) 세 상태가 한 양식(`NoticePanel`)을 쓴다.
         */}
-        {pending.length && left === 0 && anonymous ? (
-          <AltPanel style={styles.rewarded}>
-            <View style={styles.rewardedHead}>
-              <Icon name="sparkle" size={15} color={color.primary} />
-              <AppText style={styles.rewardedTitle}>
-                로그인하면 더 물어볼 수 있어요
-              </AppText>
-            </View>
-            <AppText style={styles.rewardedBody}>
-              로그인 없이 쓸 수 있는 질문을 다 썼어요. 로그인하면 이번 달 질문이
-              더 생기고, 지금까지 담은 기록도 그대로 이어져요.
-            </AppText>
-            <ActionButton
-              label="로그인하기"
-              variant="subtle"
-              onPress={() => router.push('/sign-in')}
-            />
-          </AltPanel>
-        ) : pending.length && left === 0 ? (
-          <AltPanel style={styles.rewarded}>
-            <View style={styles.rewardedHead}>
-              <Icon name="sparkle" size={15} color={color.primary} />
-              <AppText style={styles.rewardedTitle}>
-                지금 바로 풀고 싶다면
-              </AppText>
-            </View>
-            <AppText style={styles.rewardedBody}>
-              {adsExhausted
-                ? '오늘 받을 수 있는 광고 보상을 모두 받았어요. 내일 다시 받을 수 있어요.'
-                : '광고를 보면 문장을 더 물어볼 수 있어요.'}
-            </AppText>
-            <ActionButton
-              label={
-                adsExhausted
-                  ? '오늘 보상을 모두 받았어요'
-                  : '광고 보고 질문 받기'
-              }
-              variant="subtle"
-              loading={watching}
-              disabled={adsExhausted}
-              onPress={watchAd}
-            />
-          </AltPanel>
-        ) : null}
-
-        {/* 마지막 하나를 풀고 나면 0개가 된다 — 그때 '0개가 기다린다'고 하지 않는다 */}
-        {left > 0 || !pending.length ? (
-          <AltPanel style={styles.hero}>
-            <AppText style={styles.heroTitle}>
-              {pending.length
-                ? `문장 ${pending.length}개가\n답을 기다리고 있어요`
-                : '기다리는 문장이\n없어요'}
-            </AppText>
-            <AppText style={styles.heroBody}>
-              {!pending.length
-                ? '담아둔 문장은 모두 풀렸어요.'
-                : `이번 달 사용량 ${usagePercent(quota?.ratio)}%. 하나씩 풀어볼까요?`}
-            </AppText>
-          </AltPanel>
-        ) : null}
+        <NoticePanel {...notice} />
 
         <PendingList
           asks={pending.map((view) => ({
@@ -224,24 +201,6 @@ export default function PendingScreen() {
         />
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
-        <ActionButton
-          label={
-            !pending.length
-              ? '다 풀었어요'
-              : left > 0
-                ? '가장 오래 기다린 문장부터'
-                : '다음 달까지 그대로 둘게요'
-          }
-          variant={pending.length && left > 0 ? 'primary' : 'ink'}
-          loading={resolve.isPending}
-          onPress={() => {
-            if (pending.length && left > 0 && oldest) open(oldest.ask._id);
-            else router.back();
-          }}
-        />
-      </View>
-
       <AskingOverlay visible={resolve.isPending} />
     </View>
   );
@@ -250,35 +209,5 @@ export default function PendingScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.surface.base },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: gutter, paddingBottom: 24, gap: 16 },
-  /** 말이 가운데에 선다 — 왼쪽에 붙으면 오른쪽이 빈다 */
-  hero: {
-    paddingVertical: 26,
-    paddingHorizontal: 22,
-    gap: 10,
-    alignItems: 'center',
-  },
-  heroTitle: {
-    ...type.heading1,
-    fontWeight: '700',
-    color: color.text.primary,
-    lineHeight: 30,
-    textAlign: 'center',
-  },
-  heroBody: {
-    ...type.label2,
-    lineHeight: 21,
-    color: color.text.secondary,
-    textAlign: 'center',
-  },
-  rewarded: { padding: 16, gap: 10 },
-  rewardedHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  rewardedTitle: {
-    flex: 1,
-    ...type.label2,
-    fontWeight: '700',
-    color: color.text.primary,
-  },
-  rewardedBody: { ...type.label2, lineHeight: 21, color: color.text.secondary },
-  footer: { paddingHorizontal: gutter, paddingTop: 12 },
+  content: { paddingHorizontal: gutter, gap: 16 },
 });
