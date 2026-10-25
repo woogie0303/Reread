@@ -53,7 +53,16 @@ import { TokenService } from './token.service';
     AppleTokenService,
     ReaderMergeService,
   ],
-  /** 가드가 JwtService를, 다른 모듈이 소유 검사를 위해 이 둘을 쓴다 */
-  exports: [JwtModule, AuthService, TokenService, AppleTokenService],
+  /**
+   * 가드가 JwtService와 독자 모델(그 독자가 아직 있는지)을, 다른 모듈이 소유 검사를 위해
+   * 서비스들을 쓴다. 가드는 쓰는 모듈 안에서 만들어지므로 독자 모델도 함께 내보낸다.
+   */
+  exports: [
+    JwtModule,
+    MongooseModule,
+    AuthService,
+    TokenService,
+    AppleTokenService,
+  ],
 })
 export class AuthModule {}
