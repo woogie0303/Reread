@@ -51,9 +51,11 @@ src/
 - **로그인은 카카오·네이버·구글·Apple 넷뿐이다.** 비밀번호를 맡지 않는다. 이메일이
   같다고 다른 제공자 계정을 자동으로 합치지 않는다 — 남의 계정을 넘겨받는 길이 된다.
 - **로그인 없이도 쓴다**(`POST /auth/anonymous`). 소셜 계정이 하나도 없는 독자이고, 토큰
-  두 장을 똑같이 받는다. 다른 점은 질문 몫(`ASK_ANON_BUDGET_USD`, 약 10번)뿐이다 — 앱을
+  두 장을 똑같이 받는다. 다른 점은 질문 몫(`ASK_ANON_BUDGET_USD`, 약 5번)뿐이다 — 앱을
   다시 깔면 익명 독자가 새로 생겨서 정식 몫을 주면 재설치로 질문을 계속 받을 수 있다. 만드는
-  길은 IP당 한 시간에 10번으로 막는다(`RATE_LIMIT.anonymous`).
+  길은 IP당 한 시간에 10번으로 막는다(`RATE_LIMIT.anonymous`). 질문 없이 '그냥 담아둔 문장'도
+  익명 독자는 5개까지다(`ANON_SENTENCE_LIMIT`, 넘으면 403) — 비용이 아니라 로그인을 권하는 선이다.
+  앱이 그 403을 로그인 안내로 바꾼다. 물어본 문장은 세지 않는다(질문 몫이 따로 막는다).
 - **익명 독자가 로그인하면 그 기록을 로그인한 계정으로 옮긴다**(`ReaderMergeService`). 로그인하는
   세 길(`exchange`·`review`·`:provider`)은 토큰이 붙어 오면 받는다(`OptionalJwtAuthGuard`). 붙은
   토큰이 틀리면 401 — 조용히 무시하면 만료된 익명 토큰으로 로그인할 때 기록이 주인 없이 남는다.
@@ -137,7 +139,8 @@ CLOUDFLARE_ACCOUNT_ID=             cloudflare일 때 — Workers AI 페이지의
 CLOUDFLARE_API_TOKEN=              cloudflare일 때 — 'Workers AI' 토큰(Read + Edit)
 ANTHROPIC_API_KEY=                 anthropic일 때
 ASK_MONTHLY_BUDGET_USD=0.006       한 달에 쓸 수 있는 모델 비용(달러) — 질문 1번 $0.0002로 약 30번
-ASK_ANON_BUDGET_USD=0.002          로그인 없이 쓰는 독자의 한 달 몫 — 약 10번. 다 쓰면 앱이 로그인을 권한다
+ASK_ANON_BUDGET_USD=0.001          로그인 없이 쓰는 독자의 한 달 몫 — 약 5번. 다 쓰면 앱이 로그인을 권한다
+ANON_SENTENCE_LIMIT=5              로그인 없이 쓰는 독자가 질문 없이 담을 수 있는 문장 수
 ASK_TYPICAL_COST_USD=0.0002        아직 몇 번 안 물은 독자의 '약 N번' 어림에 쓰는 질문 1번 비용
 ASK_AD_BONUS_USD=0.0004            광고 한 번이 주는 사용량 — 약 2번
 ASK_AD_DAILY_LIMIT=3               하루에 받을 수 있는 광고 횟수

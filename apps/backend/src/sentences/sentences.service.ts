@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Ask } from '../asks/ask.schema';
 import { assertPageInBook } from '../common/page-in-book';
 import { Book } from '../books/book.schema';
 import { LexicalItem } from '../items/lexical-item.schema';
+import { Reader } from '../readers/reader.schema';
 import { Sentence, type SentenceDocument } from './sentence.schema';
 import type {
   CreateSentenceDto,
@@ -26,6 +32,8 @@ export class SentencesService {
     @InjectModel(Book.name) private readonly books: Model<Book>,
     @InjectModel(LexicalItem.name) private readonly items: Model<LexicalItem>,
     @InjectModel(Ask.name) private readonly asks: Model<Ask>,
+    @InjectModel(Reader.name) private readonly readers: Model<Reader>,
+    private readonly config: ConfigService,
   ) {}
 
   async create(
@@ -36,12 +44,38 @@ export class SentencesService {
     const book = await this.books.findOne({ _id: dto.bookId, readerId: owner });
     if (!book) throw new NotFoundException('그 책을 찾지 못했어요.');
     assertPageInBook(book, dto.page);
+    await this.assertRoomForAnonymous(owner);
 
     return this.sentences.create({
       ...dto,
       bookId: new Types.ObjectId(dto.bookId),
       readerId: owner,
     });
+  }
+
+  /**
+   * 로그인 없이 쓰는 독자가 '그냥 담아둔 문장'을 몇 개까지 담을 수 있는지(기본 5).
+   * 문장만 담는 일은 모델 비용이 없어 막을 까닭은 못 되지만, 익명 기록은 앱을 지우면
+   * 사라지니 이 선에서 로그인을 권한다 — 앱이 이 거절을 로그인 안내로 바꿔 보인다.
+   *
+   * **물어본 문장은 세지 않는다.** 그쪽은 이미 질문 몫(`ASK_ANON_BUDGET_USD`)이 막는다.
+   * 익명 독자의 기록은 적어서 문장 전체를 훑어도 값이 싸다.
+   */
+  private async assertRoomForAnonymous(owner: Types.ObjectId): Promise<void> {
+    const reader = await this.readers.findById(owner).select('accounts');
+    if ((reader?.accounts.length ?? 1) > 0) return;
+
+    const limit = Number(this.config.get('ANON_SENTENCE_LIMIT') ?? 5);
+    const asked = await this.asks.distinct('sentenceId', { readerId: owner });
+    const kept = await this.sentences.countDocuments({
+      readerId: owner,
+      _id: { $nin: asked },
+    });
+    if (kept >= limit) {
+      throw new ForbiddenException(
+        '로그인하면 더 많은 문장을 저장할 수 있어요.',
+      );
+    }
   }
 
   /**

@@ -274,13 +274,13 @@ export class AsksService {
         ? (reader.askBonus.dayCount ?? 0)
         : 0;
     /**
-     * 로그인 없이 쓰는 독자는 몫이 작다(기본 약 10번). 앱을 지우고 다시 깔면 익명 독자가
+     * 로그인 없이 쓰는 독자는 몫이 작다(기본 약 5번). 앱을 지우고 다시 깔면 익명 독자가
      * 새로 생겨서, 정식 몫을 주면 재설치만으로 질문을 계속 받을 수 있다. 다 쓰면 앱이
      * 로그인을 권하고, 로그인하면 정식 몫으로 이어진다(익명 기록은 그 계정으로 옮겨진다).
      */
     const anonymous = (reader?.accounts.length ?? 0) === 0;
     const base = anonymous
-      ? Number(this.config.get('ASK_ANON_BUDGET_USD') ?? 0.002)
+      ? Number(this.config.get('ASK_ANON_BUDGET_USD') ?? 0.001)
       : Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.006);
     const budget = base + bonus;
 
