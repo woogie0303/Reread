@@ -1,22 +1,26 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { useGetAnonymousLimit } from '@/entities/sentence/api/sentence.api';
 import { color, gutter, type } from '@/shared/config';
 import { useSession } from '@/shared/session/session';
 import { AppText, Icon, Tap } from '@/shared/ui';
 
 /**
- * 로그인 없이 쓰는 독자에게 늘 떠 있는 안내 — 세 탭 모두의 탭 바 위에 선다.
- * 닫을 수 없다: 익명 기록은 앱을 지우면 사라져서, 로그인이 곧 기록을 지키는 일이다.
- * 로그인하면 `anonymous`가 꺼지며 저절로 사라진다.
+ * 로그인 없이 쓰는 독자에게 **좋아하는 문장을 5개 담았거나 문장 5개를 물어본 때부터** 떠 있는
+ * 안내 — 세 탭 모두의 탭 바 위에 선다. 처음부터 띄우면 아직 써 보지도 않은 독자에게 로그인을
+ * 내미는 셈이라, 더 담고 싶어질 즈음에야 말을 건다. 닫을 수 없다: 익명 기록은 앱을 지우면
+ * 사라져서 로그인이 곧 기록을 지키는 일이다. 로그인하면 `anonymous`가 꺼지며 저절로 사라진다.
  *
- * 문장을 5개 넘게 담으려다 거절당했을 때도 같은 말을 한다(서버 `ANON_SENTENCE_LIMIT`) —
- * 이미 보고 있던 말이라 거절이 갑작스러운 벽으로 느껴지지 않는다.
+ * 문장을 5개 넘게 담으려다 거절당했을 때(서버 `ANON_SENTENCE_LIMIT`)는 이미 이 배너가 서 있다.
  */
 export function LoginBanner() {
   const router = useRouter();
   const { status, reader } = useSession();
-  if (status !== 'in' || !reader?.anonymous) return null;
+  const anonymous = status === 'in' && Boolean(reader?.anonymous);
+  const { data } = useGetAnonymousLimit(anonymous);
+  if (!anonymous || !data?.anonymous) return null;
+  if (data.kept < data.limit && data.asked < data.limit) return null;
 
   return (
     <Tap

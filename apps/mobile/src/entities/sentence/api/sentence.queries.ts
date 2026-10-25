@@ -51,6 +51,25 @@ function mergeAsks(views: ApiAskView[]): ApiAskView | null {
     : latest;
 }
 
+/**
+ * 로그인 없이 쓰는 독자가 담은 문장과 질문한 문장이 몇 개인지(상한과 함께). 로그인 배너가
+ * 둘 중 하나가 상한에 닿았을 때부터 서도록 이걸 본다 — 문장을 담거나 물으면 `sentencesKey`가
+ * 새로 고쳐져서 숫자도 바로 따라온다. 익명이 아니면 부르지 않는다.
+ */
+export function useGetAnonymousLimit(enabled: boolean) {
+  return useQuery({
+    queryKey: [...sentencesKey, 'anonymous-limit'],
+    enabled,
+    queryFn: () =>
+      api<{
+        anonymous: boolean;
+        kept: number;
+        asked: number;
+        limit: number;
+      }>('/sentences/anonymous-limit'),
+  });
+}
+
 export function useGetLikedSentences(bookId?: string) {
   return useQuery({
     queryKey: [...sentencesKey, 'liked', bookId],
@@ -113,4 +132,3 @@ export function useGetBookSentenceFeed(bookId: string) {
 
   return { rows, isPending: sentences.isPending || items.isPending };
 }
-
