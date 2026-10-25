@@ -95,6 +95,7 @@ export function BookAdd({
           value={draft.pages}
           onChangeText={set('pages')}
           keyboard
+          optional
         />
         <Field
           label="지금 몇 쪽"

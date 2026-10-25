@@ -74,9 +74,10 @@ export default function ProgressScreen() {
             <Quote numberOfLines={1} style={styles.title}>
               {book.title}
             </Quote>
-            <ProgressBar
-              value={total ? Math.min(1, (typed || 0) / total) : 0}
-            />
+            {/* 쪽수를 모르는 책은 비율이 없다 — 빈 막대는 '하나도 안 읽었다'로 읽힌다 */}
+            {total ? (
+              <ProgressBar value={Math.min(1, (typed || 0) / total)} />
+            ) : null}
           </View>
         ) : null}
 

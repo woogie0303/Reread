@@ -53,7 +53,10 @@ export default function BookAddScreen() {
   });
   const create = useCreateBook();
 
-  /** 제목·지은이·전체 쪽수가 있어야 시작할 수 있다 — 지금 몇 쪽인지는 없어도 된다 */
+  /**
+   * 제목·지은이·장르만 있으면 시작할 수 있다. 전체 쪽수는 모를 수 있다 — 전자책이나
+   * 쪽수가 안 적힌 판이 있다. 쪽수가 없는 책은 진도를 퍼센트 없이 쪽으로만 보인다.
+   */
   /** 전체 쪽수보다 더 읽을 수는 없다 — 서버도 한 번 더 막는다 */
   const tooFar =
     Number(draft.pages) > 0 && Number(draft.currentPage) > Number(draft.pages);
@@ -61,7 +64,6 @@ export default function BookAddScreen() {
     !tooFar &&
     draft.title.trim().length > 0 &&
     draft.author.trim().length > 0 &&
-    Number(draft.pages) > 0 &&
     Boolean(draft.genre);
 
   const save = async () => {
@@ -70,7 +72,7 @@ export default function BookAddScreen() {
       const book = await create.mutateAsync({
         title: draft.title.trim(),
         author: draft.author.trim(),
-        pages: Number(draft.pages),
+        pages: Number(draft.pages) || undefined,
         currentPage: Number(draft.currentPage) || undefined,
         cover: draft.cover,
         genre: draft.genre,

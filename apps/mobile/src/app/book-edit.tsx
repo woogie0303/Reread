@@ -59,7 +59,6 @@ function EditForm({ book }: { book: Book }) {
     !tooFar &&
     draft.title.trim().length > 0 &&
     draft.author.trim().length > 0 &&
-    Number(draft.pages) > 0 &&
     Boolean(draft.genre);
 
   const save = async () => {
@@ -68,7 +67,7 @@ function EditForm({ book }: { book: Book }) {
       await update.mutateAsync({
         title: draft.title.trim(),
         author: draft.author.trim(),
-        pages: Number(draft.pages),
+        pages: Number(draft.pages) || undefined,
         currentPage: Number(draft.currentPage) || 0,
         genre: draft.genre,
       });
