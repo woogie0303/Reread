@@ -15,7 +15,7 @@ export {
   MicIcon,
   MoreIcon,
   PageIcon,
-  PinIcon,
+  StarIcon,
   TrashIcon,
   type FilledIconName,
 } from './icon';

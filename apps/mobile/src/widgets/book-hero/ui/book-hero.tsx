@@ -7,6 +7,7 @@ import { color, shadow, type } from '@/shared/config';
 import {
   AppText,
   CameraIcon,
+  Chip,
   Icon,
   ProgressBar,
   Quote,
@@ -104,30 +105,47 @@ export function BookHero({
         accessibilityLabel={
           progress && measured
             ? `${progress.totalPages}쪽 중 ${progress.currentPage}쪽까지 읽었어요`
-            : progress
+            : progress && progress.currentPage > 0
               ? `${progress.currentPage}쪽까지 읽었어요`
               : undefined
         }
       >
-        {progress ? (
+        {progress && measured ? (
           <>
-            {measured ? <ProgressBar value={ratio} height={8} /> : null}
+            <ProgressBar value={ratio} height={8} />
             {/*
               값이 라벨보다 먼저 읽힌다 — 이 줄에서 알고 싶은 것은 '얼마나 읽었나'이고,
               쪽수는 그 근거다. 한동안 둘이 같은 크기·같은 옅은 색으로 붙어 있었다.
             */}
             <AppText style={styles.progressLabel}>
-              {measured ? (
-                <AppText style={emphasis()}>
-                  {`${Math.round(ratio * 100)}%`}
-                </AppText>
-              ) : null}
-              {measured
-                ? `  p.${progress.currentPage} / ${progress.totalPages}`
-                : `p.${progress.currentPage}`}
+              <AppText style={emphasis()}>
+                {`${Math.round(ratio * 100)}%`}
+              </AppText>
+              {`  p.${progress.currentPage} / ${progress.totalPages}`}
               {progress.lastReadLabel ? ` · ${progress.lastReadLabel}` : ''}
             </AppText>
           </>
+        ) : progress && progress.currentPage > 0 ? (
+          /**
+           * 전체 쪽수를 모르면 비율이 없다 — 읽은 쪽 하나만 사실로 세운다. 막대 없이
+           * 글자로만 두면 진도 줄이 아니라 아무 숫자처럼 읽혀서 배지로 감싼다.
+           */
+          <View style={styles.pageRow}>
+            <Chip label={`p.${progress.currentPage}`} tone="primary" />
+            {progress.lastReadLabel ? (
+              <AppText style={styles.progressLabel}>
+                {progress.lastReadLabel}
+              </AppText>
+            ) : null}
+          </View>
+        ) : progress ? (
+          /**
+           * 쪽수도 읽은 쪽도 없다 — 'p.0'은 보이지 않는다. 다만 이 줄이 곧 진도를 적는
+           * 버튼이라 비워 두면 기록할 길이 사라진다. 누를 수 있을 때만 그 일을 말한다.
+           */
+          onPressProgress ? (
+            <AppText style={styles.progressLabel}>읽은 쪽 기록하기</AppText>
+          ) : null
         ) : (
           <AppText style={styles.progressLabel}>
             {book.pages ? `${book.pages}p` : ''}
@@ -241,4 +259,5 @@ const styles = StyleSheet.create({
   /** 막대 위아래로 손가락이 닿을 자리를 준다 — 8pt 막대만으로는 누르기 어렵다 */
   progress: { gap: 8, paddingVertical: 4 },
   progressLabel: { ...type.label2, color: color.text.meta },
+  pageRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

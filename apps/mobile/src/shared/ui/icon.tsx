@@ -191,10 +191,11 @@ export function MoreIcon({ size = 20, color = INK }: IconProps) {
 }
 
 /**
- * 압정(📌) — 홈 맨 위에 고정한 책. 고정하면 차고, 아니면 선만 남는다.
+ * 별 — 홈 맨 위에 고정한 책. 고정하면 차고, 아니면 선만 남는다. 한때는 압정이었는데
+ * 작게 그리면 무엇인지 읽히지 않았다 — 별은 '아끼는 것'으로 바로 읽힌다.
  * TODO: 디자인 문서에 없어 여기서 그렸다. `icons/*.svg`에 들어오면 교체한다.
  */
-export function PinIcon({
+export function StarIcon({
   size = 20,
   color = INK,
   filled,
@@ -202,18 +203,11 @@ export function PinIcon({
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M9 3.5h6M10 3.5l-.6 6.2-3.1 3.4v1.4h11.4v-1.4l-3.1-3.4-.6-6.2"
+        d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"
         stroke={color}
         fill={filled ? color : 'none'}
         strokeWidth={1.8}
-        strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      <Path
-        d="M12 14.5v6"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinecap="round"
       />
     </Svg>
   );

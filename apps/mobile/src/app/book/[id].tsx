@@ -21,8 +21,8 @@ import {
   DisclosureRow,
   MoreIcon,
   OptionSheet,
-  PinIcon,
   ScreenHeader,
+  StarIcon,
   Tap,
   TrashIcon,
 } from '@/shared/ui';
@@ -53,7 +53,7 @@ export default function BookScreen() {
     (update.isPending && update.variables?.pinned) || reading?.book.id === id;
 
   /**
-   * 압정 — 누르면 이 책을 홈 맨 위에 고정한다(다른 책의 고정은 풀린다). 이미 꽂힌
+   * 별 — 누르면 이 책을 홈 맨 위에 고정한다(다른 책의 고정은 풀린다). 이미 꽂힌
    * 책에서는 누를 수 없다 — 핀은 뽑는 게 아니라 다른 책으로 옮기는 것이다.
    * 한동안 ⋮ 안에 '홈 고정 풀기'로 있었는데, 지금 고정됐는지가 메뉴를 열어야 보였다.
    */
@@ -134,7 +134,7 @@ export default function BookScreen() {
                   pinned ? '홈 맨 위에 고정된 책' : '홈에 고정하기'
                 }
               >
-                <PinIcon
+                <StarIcon
                   size={22}
                   filled={pinned}
                   color={pinned ? color.primary : color.text.primary}
