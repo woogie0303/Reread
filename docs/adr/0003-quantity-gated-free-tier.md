@@ -16,9 +16,10 @@ of concluding they want more of it.
   _Pending Ask_. The pile of unanswered sentences is the upsell surface, which is why
   rewarded ads are offered there, only once the monthly quota is spent, rather than
   interstitials before an ask.
-- **One exception, decided later:** tapping the photo (OCR) button shows a single
-  interstitial before the camera opens. Typing a sentence by hand never shows an ad, and a
-  failed ad load never blocks the camera. The rewarded ad grants `ASK_AD_BONUS_USD` of budget (default
+- **An exception, later removed:** tapping the photo (OCR) button once showed a single
+  interstitial before the camera opens. It was taken out — the moment a reader photographs
+  the page is the middle of reading, which is exactly where this ADR keeps ads out. The rewarded
+  ad is now the only ad. It grants `ASK_AD_BONUS_USD` of budget (default
   $0.01, about one ask), capped at `ASK_AD_DAILY_LIMIT` per day (default 3) — at ₩14 an ask, a rewarded view (~₩15–30) only just pays for one ask, so more than that loses money. There is no server-side
   verification (SSV) of the ad network's callback yet, so the daily cap is what bounds the
   damage of a forged request.

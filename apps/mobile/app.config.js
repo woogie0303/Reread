@@ -33,7 +33,6 @@ if (['production', 'testflight'].includes(process.env.EAS_BUILD_PROFILE)) {
       'EXPO_PUBLIC_ADMOB_IOS_APP_ID',
       'AdMob iOS 앱 ID (구글 시험용 ID로는 출시 못 한다)',
     ],
-    ['EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID', '사진 질문 앞 전면 광고 단위 ID'],
     ['EXPO_PUBLIC_ADMOB_REWARDED_ID', '한도 소진 뒤 보상형 광고 단위 ID'],
   ].filter(([key]) => !process.env[key]);
   if (missing.length) {

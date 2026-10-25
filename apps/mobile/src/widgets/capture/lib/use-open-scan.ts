@@ -1,29 +1,17 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useRef } from 'react';
-
-import { showInterstitial } from '@/shared/ads/ads';
+import { useCallback } from 'react';
 
 /**
- * 촬영 화면을 여는 단 하나의 길. **사진으로 묻는 버튼을 누른 순간** 광고를 한 번
- * 보이고, 광고가 끝나면 촬영으로 간다. 직접 적어 묻는 길에는 광고가 없다.
+ * 촬영 화면을 여는 단 하나의 길. 광고는 없다 — 읽던 쪽을 찍는 순간은 읽는 흐름의 한가운데라
+ * 거기에 광고를 끼우지 않는다(ADR-0003). 한때 여기서 전면 광고를 한 번 보였다.
  *
  * `replace`는 직접 적는 화면에서 사진으로 바꿔 탈 때 — 그 화면을 쌓아 두지 않는다.
- * 광고가 안 떠도 촬영은 열린다(`showInterstitial`). 광고가 도는 동안 같은 버튼이
- * 또 눌려 촬영이 두 번 열리지 않게 막는다.
  */
 export function useOpenScan() {
   const router = useRouter();
-  const busy = useRef(false);
 
   return useCallback(
-    async (bookId?: string, options?: { replace?: boolean }) => {
-      if (busy.current) return;
-      busy.current = true;
-      try {
-        await showInterstitial();
-      } finally {
-        busy.current = false;
-      }
+    (bookId?: string, options?: { replace?: boolean }) => {
       const href = bookId
         ? ({ pathname: '/scan', params: { bookId } } as const)
         : '/scan';
