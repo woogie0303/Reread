@@ -35,6 +35,12 @@ export class SentencesController {
     return this.sentences.list(readerId, query);
   }
 
+  /** `:id`보다 먼저 선언해야 한다 — 나중에 두면 이 이름이 id 자리로 먼저 잡힌다 */
+  @Get('anonymous-limit')
+  anonymousLimit(@CurrentReader() readerId: string) {
+    return this.sentences.anonymousLimit(readerId);
+  }
+
   @Get(':id')
   find(
     @CurrentReader() readerId: string,

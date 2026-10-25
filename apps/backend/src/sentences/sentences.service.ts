@@ -62,20 +62,44 @@ export class SentencesService {
    * 익명 독자의 기록은 적어서 문장 전체를 훑어도 값이 싸다.
    */
   private async assertRoomForAnonymous(owner: Types.ObjectId): Promise<void> {
-    const reader = await this.readers.findById(owner).select('accounts');
-    if ((reader?.accounts.length ?? 1) > 0) return;
+    const { anonymous, kept, limit } = await this.anonymousLimit(
+      owner.toString(),
+    );
+    if (anonymous && kept >= limit) {
+      throw new ForbiddenException(
+        '로그인하면 더 많은 문장을 저장할 수 있어요.',
+      );
+    }
+  }
 
+  /**
+   * `GET /sentences/anonymous-limit` — 로그인 없이 쓰는 독자가 질문 없이 담은 문장(`kept`)과
+   * 질문한 문장(`asked`)이 각각 몇 개이고 상한이 몇인지. 앱의 로그인 배너가 둘 중 하나가
+   * 상한에 닿았을 때부터 서도록 이걸 본다 — 세는 규칙은 서버만 정확히 알아서(물어본 문장은
+   * 담은 문장에서 뺀다) 앱이 목록으로 따로 세지 않는다. 로그인한 독자는 `anonymous: false`다.
+   *
+   * 거절(403)은 `kept`에만 건다. 질문한 문장 쪽은 이미 질문 몫이 막는다 — 여기서는 배너를
+   * 띄우는 데에만 쓴다.
+   */
+  async anonymousLimit(readerId: string): Promise<{
+    anonymous: boolean;
+    kept: number;
+    asked: number;
+    limit: number;
+  }> {
+    const owner = new Types.ObjectId(readerId);
     const limit = Number(this.config.get('ANON_SENTENCE_LIMIT') ?? 5);
+    const reader = await this.readers.findById(owner).select('accounts');
+    if ((reader?.accounts.length ?? 1) > 0) {
+      return { anonymous: false, kept: 0, asked: 0, limit };
+    }
+
     const asked = await this.asks.distinct('sentenceId', { readerId: owner });
     const kept = await this.sentences.countDocuments({
       readerId: owner,
       _id: { $nin: asked },
     });
-    if (kept >= limit) {
-      throw new ForbiddenException(
-        '로그인하면 더 많은 문장을 저장할 수 있어요.',
-      );
-    }
+    return { anonymous: true, kept, asked: asked.length, limit };
   }
 
   /**

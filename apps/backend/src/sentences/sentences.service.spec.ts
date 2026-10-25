@@ -89,4 +89,34 @@ describe('SentencesService.create — 익명 독자의 문장 수', () => {
       ForbiddenException,
     );
   });
+
+  describe('anonymousLimit — 배너가 서는 때', () => {
+    it('익명 독자는 담은 문장 수와 상한을 돌려준다', async () => {
+      reader([]);
+      sentences.countDocuments.mockResolvedValue(3);
+      asks.distinct.mockResolvedValue([
+        new Types.ObjectId(),
+        new Types.ObjectId(),
+      ]);
+
+      await expect(service.anonymousLimit(readerId)).resolves.toEqual({
+        anonymous: true,
+        kept: 3,
+        asked: 2,
+        limit: 5,
+      });
+    });
+
+    it('로그인한 독자는 세지 않는다', async () => {
+      reader([{ provider: 'kakao' }]);
+
+      await expect(service.anonymousLimit(readerId)).resolves.toEqual({
+        anonymous: false,
+        kept: 0,
+        asked: 0,
+        limit: 5,
+      });
+      expect(sentences.countDocuments).not.toHaveBeenCalled();
+    });
+  });
 });

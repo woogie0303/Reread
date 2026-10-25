@@ -182,6 +182,7 @@ DELETE /api/books/:id             문장·그 문장들의 질문·그 책에서
 
 GET    /api/sentences ?bookId= &liked=
 POST   /api/sentences
+GET    /api/sentences/anonymous-limit  익명 독자가 담은(kept)·질문한(asked) 문장 수와 상한 — 로그인 배너가 본다. :id보다 먼저 선언
 GET    /api/sentences/:id
 PATCH  /api/sentences/:id         글 · 쪽 · 메모 · 하트(favorite)
 DELETE /api/sentences/:id         그 문장의 질문·그 문장에서만 만난 표현도 함께
