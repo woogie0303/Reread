@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { monthKey } from '../asks/ask-usage';
 import { ReaderMergeService } from './reader-merge.service';
 
 type Mock = jest.Mock;
@@ -11,7 +12,12 @@ const model = () => ({
   updateMany: jest.fn(),
   deleteOne: jest.fn(),
   deleteMany: jest.fn(),
+  aggregate: jest.fn(),
 });
+
+/** `findById(...)`도 `findById(...).select(...)`도 같은 문서를 준다 */
+const found = (doc: unknown) =>
+  Object.assign(Promise.resolve(doc), { select: () => Promise.resolve(doc) });
 
 describe('ReaderMergeService', () => {
   const anonymousId = new Types.ObjectId().toString();
@@ -42,7 +48,9 @@ describe('ReaderMergeService', () => {
       refreshTokens,
       tickets,
     ] = Array.from({ length: 9 }, model);
-    readers.findById.mockResolvedValue({ accounts: [], booksFinished: 0 });
+    readers.findById.mockReturnValue(found({ accounts: [], booksFinished: 0 }));
+    readers.updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+    asks.aggregate.mockResolvedValue([]);
     items.find.mockResolvedValue([]);
 
     service = new ReaderMergeService(
@@ -59,10 +67,9 @@ describe('ReaderMergeService', () => {
   });
 
   it('소셜 계정이 붙은 독자는 넘겨주지 않는다', async () => {
-    readers.findById.mockResolvedValue({
-      accounts: [{ provider: 'kakao' }],
-      booksFinished: 0,
-    });
+    readers.findById.mockReturnValue(
+      found({ accounts: [{ provider: 'kakao' }], booksFinished: 0 }),
+    );
 
     await service.absorb(anonymousId, intoId);
 
@@ -149,7 +156,7 @@ describe('ReaderMergeService', () => {
   });
 
   it('다 읽은 권수를 더한다', async () => {
-    readers.findById.mockResolvedValue({ accounts: [], booksFinished: 2 });
+    readers.findById.mockReturnValue(found({ accounts: [], booksFinished: 2 }));
 
     await service.absorb(anonymousId, intoId);
 
@@ -157,5 +164,42 @@ describe('ReaderMergeService', () => {
       { _id: into },
       { $inc: { booksFinished: 2 } },
     );
+  });
+
+  it('익명으로 쓴 이번 달 질문 몫을 로그인한 계정에 더하고, 익명 쪽은 비운다', async () => {
+    const month = monthKey(new Date());
+    readers.findById.mockImplementation((id: Types.ObjectId) =>
+      found({
+        accounts: [],
+        booksFinished: 0,
+        askUsage: from.equals(id)
+          ? { month, spent: 0.0008, batches: 4 }
+          : { month, spent: 0.002, batches: 9 },
+      }),
+    );
+
+    await service.absorb(anonymousId, intoId);
+
+    expect(readers.updateOne).toHaveBeenCalledWith(
+      { _id: into, 'askUsage.month': month },
+      { $inc: { 'askUsage.spent': 0.0008, 'askUsage.batches': 4 } },
+    );
+    expect(readers.updateOne).toHaveBeenCalledWith(
+      { _id: from },
+      { $unset: { askUsage: 1 } },
+    );
+  });
+
+  it('질문 몫은 질문을 옮기기 전에 센다', async () => {
+    const order: string[] = [];
+    asks.aggregate.mockImplementation(() => {
+      order.push('count');
+      return Promise.resolve([]);
+    });
+    asks.updateMany.mockImplementation(() => order.push('move'));
+
+    await service.absorb(anonymousId, intoId);
+
+    expect(order).toEqual(['count', 'count', 'move']);
   });
 });

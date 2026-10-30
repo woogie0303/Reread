@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Ask } from '../asks/ask.schema';
+import { monthKey, readUsage } from '../asks/ask-usage';
 import { Book } from '../books/book.schema';
 import { LexicalItem } from '../items/lexical-item.schema';
 import { ReadingLog } from '../reading/reading-log.schema';
@@ -55,6 +56,15 @@ export class ReaderMergeService {
     const from = new Types.ObjectId(anonymousId);
     const into = new Types.ObjectId(intoId);
 
+    /**
+     * 이번 달 질문 사용량은 질문을 옮기기 **전에** 양쪽 다 세어 둔다. 옮긴 뒤에 세면 익명
+     * 쪽은 0이 되고, 로그인한 쪽은 옮겨 온 질문까지 세어서 아래에서 한 번 더 더해진다.
+     */
+    const now = new Date();
+    const models = { readers: this.readers, asks: this.asks };
+    const carried = await readUsage(models, from, now);
+    await readUsage(models, into, now);
+
     await this.mergeItems(from, into);
 
     /** 홈에 고정하는 책은 한 권뿐이다 — 옮겨 온 책은 고정을 풀고 원래 계정의 고정을 지킨다 */
@@ -71,6 +81,24 @@ export class ReaderMergeService {
       this.retells.updateMany({ readerId: from }, { $set: { readerId: into } }),
       this.logs.updateMany({ readerId: from }, { $set: { readerId: into } }),
     ]);
+
+    /**
+     * 익명으로 쓴 몫은 로그인한 계정에 더한다 — 안 그러면 로그인이 몫을 새로 받는 길이
+     * 된다. 더한 뒤 익명 쪽을 지워서 다시 돌 때 두 번 더하지 않는다. 그 사이에 끊기면 한 번
+     * 더 더해질 수 있지만, 넉넉하게 세는 쪽이다.
+     */
+    if (carried.spent > 0 || carried.batches > 0) {
+      await this.readers.updateOne(
+        { _id: into, 'askUsage.month': monthKey(now) },
+        {
+          $inc: {
+            'askUsage.spent': carried.spent,
+            'askUsage.batches': carried.batches,
+          },
+        },
+      );
+      await this.readers.updateOne({ _id: from }, { $unset: { askUsage: 1 } });
+    }
 
     if (anonymous.booksFinished > 0) {
       await this.readers.updateOne(

@@ -60,6 +60,29 @@ export class AskBonus {
 export const AskBonusSchema = SchemaFactory.createForClass(AskBonus);
 
 /**
+ * 이번 달 질문 사용량. 월 몫은 이 값으로 정한다(`asks/ask-usage.ts`). 질문마다 적힌
+ * 비용(`Ask.cost`)을 더해서 세면 질문을 지울 때 몫이 돌아와서, 질문을 지워도 줄지 않는
+ * 이곳에 따로 더한다. 적힌 달이 이번 달이 아니면 이번 달 질문에서 다시 센다 — 0으로
+ * 되돌리는 일은 없다.
+ */
+@Schema({ _id: false })
+export class AskUsage {
+  /** 이 값이 속한 달, `YYYY-MM` */
+  @Prop({ required: true })
+  month!: string;
+
+  /** 이번 달에 쓴 모델 비용(달러) */
+  @Prop({ default: 0 })
+  spent!: number;
+
+  /** 이번 달에 물어본 횟수 — 한 쪽에서 한 번에 물은 묶음이 한 번이다. 남은 횟수를 어림할 때만 쓴다 */
+  @Prop({ default: 0 })
+  batches!: number;
+}
+
+export const AskUsageSchema = SchemaFactory.createForClass(AskUsage);
+
+/**
  * 읽는 사람. 비밀번호가 없다 — 로그인은 카카오·네이버·구글·Apple로만 들어온다.
  *
  * 레벨은 두지 않는다. 한때 스스로 밝힌 영어 레벨(입문·중급·고급)을 받아 뜻을
@@ -88,6 +111,9 @@ export class Reader {
 
   @Prop({ type: AskBonusSchema })
   askBonus?: AskBonus;
+
+  @Prop({ type: AskUsageSchema })
+  askUsage?: AskUsage;
 }
 
 export type ReaderDocument = HydratedDocument<Reader>;

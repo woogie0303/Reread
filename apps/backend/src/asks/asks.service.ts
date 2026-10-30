@@ -20,6 +20,7 @@ import {
   type AskModel,
 } from './model/ask-model';
 import { Ask, type AskDocument, type AskPick } from './ask.schema';
+import { addUsage, monthKey, readUsage, startOfMonth } from './ask-usage';
 import {
   MAX_PICKS,
   type CreateAskDto,
@@ -253,9 +254,9 @@ export class AsksService {
   }
 
   /**
-   * 이번 달 몫. 달이 바뀌면 저절로 찬다 — 어딘가에 남은 몫을 적어두고
-   * 매달 0으로 되돌리는 대신, 이번 달에 답을 받은 질문의 비용을 더하기만 한다.
-   * 되돌리는 일이 없으면 되돌리다 실패할 일도 없다.
+   * 이번 달 몫. 달이 바뀌면 저절로 찬다 — 남은 몫을 적어두고 매달 0으로 되돌리는
+   * 대신, 답을 받을 때 쓴 비용을 독자에게 더하기만 한다(`ask-usage.ts`). 되돌리는
+   * 일이 없으면 되돌리다 실패할 일도 없다.
    *
    * 횟수가 아니라 비용으로 센다 — 한 쪽에서 다섯 문장을 묻는 것과 한 문장을 묻는
    * 것은 비용이 몇 배 다르다(ADR-0003).
@@ -284,42 +285,17 @@ export class AsksService {
       : Number(this.config.get('ASK_MONTHLY_BUDGET_USD') ?? 0.006);
     const budget = base + bonus;
 
-    /**
-     * 묶음별로 모아 묶음 하나를 한 번으로 센다 — 남은 횟수의 어림값은 '한 번 물을 때
-     * 평균 얼마'로 내야 해서다. 비용이 적히기 전에 답한 질문은 0으로 센다.
-     */
-    const [spent] = await this.asks.aggregate<{
-      total: number;
-      batches: number;
-    }>([
-      {
-        $match: {
-          readerId: new Types.ObjectId(readerId),
-          status: 'answered',
-          answeredAt: { $gte: startOfMonth(now) },
-        },
-      },
-      {
-        $group: {
-          _id: { $ifNull: ['$batchId', '$_id'] },
-          cost: { $sum: { $ifNull: ['$cost', 0] } },
-        },
-      },
-      { $match: { cost: { $gt: 0 } } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: '$cost' },
-          batches: { $sum: 1 },
-        },
-      },
-    ]);
-    const total = spent?.total ?? 0;
+    const usage = await readUsage(
+      { readers: this.readers, asks: this.asks },
+      new Types.ObjectId(readerId),
+      now,
+    );
+    const total = usage.spent;
 
     /** 이 독자가 이번 달 몇 번 물었으면 그 평균으로, 아니면 처음 잰 평균으로 어림한다 */
     const typical =
-      spent && spent.batches >= 3
-        ? total / spent.batches
+      usage.batches >= 3 && total > 0
+        ? total / usage.batches
         : Number(this.config.get('ASK_TYPICAL_COST_USD') ?? 0.0002);
     const left = budget - total;
 
@@ -461,6 +437,16 @@ export class AsksService {
       ask.pendingReason = undefined;
       done.push(await ask.save());
     }
+
+    /** 이미 한 번으로 세어진 묶음의 나머지를 물었으면 비용만 더하고 횟수는 그대로 둔다 */
+    if (answeredCount && cost > 0) {
+      await addUsage(
+        { readers: this.readers, asks: this.asks },
+        new Types.ObjectId(readerId),
+        { spent: cost, batches: counted ? 0 : 1 },
+        new Date(),
+      );
+    }
     return done;
   }
 
@@ -585,16 +571,8 @@ function tidy(picks: string[]): string[] {
   return out.slice(0, MAX_PICKS);
 }
 
-function monthKey(now: Date): string {
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
 function dayKey(now: Date): string {
   return `${monthKey(now)}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-function startOfMonth(now: Date): Date {
-  return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
 function startOfNextMonth(now: Date): Date {
