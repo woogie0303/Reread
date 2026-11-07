@@ -404,7 +404,12 @@ const styles = StyleSheet.create({
   },
 
   foot: { gap: 20 },
-  problem: { ...type.caption1, lineHeight: 18, color: color.status.cautionary },
+  problem: {
+    ...type.caption1,
+    lineHeight: 20,
+    textAlign: 'center',
+    color: color.status.cautionary,
+  },
 
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   rule: {

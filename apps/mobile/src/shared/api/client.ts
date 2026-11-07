@@ -129,7 +129,7 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
         throw new NetworkError('답이 너무 늦어지고 있어요.', true);
       }
       throw new NetworkError(
-        '서버에 닿지 못했어요. 인터넷 연결을 확인해 주세요.',
+        '인터넷 연결을 확인해주세요',
         false,
       );
     } finally {
