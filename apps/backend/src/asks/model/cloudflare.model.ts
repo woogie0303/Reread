@@ -184,8 +184,8 @@ export class CloudflareModel implements AskModel {
               schema: z.toJSONSchema(AnswerFormat),
             },
           },
-          /** 다섯 문장에 표현 여덟 개씩이어도 3천 토큰 안쪽이다 */
-          max_tokens: 4000,
+          /** 쓰임이 붙어 다섯 문장에 표현 여덟 개씩이면 8천 토큰 안팎이다(ADR-0005) — 잘리면 형식 오류다 */
+          max_tokens: 12000,
           ...PRICES[this.modelName]?.noThinking,
         }),
         signal: AbortSignal.timeout(this.timeoutMs),

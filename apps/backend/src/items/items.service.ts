@@ -12,7 +12,7 @@ import { LexicalItem, type LexicalItemDocument } from './lexical-item.schema';
 import type {
   AddEncounterDto,
   ListItemsQuery,
-  SaveItemDto,
+  SaveItemInput,
   UpdateItemDto,
 } from './dto/item.dto';
 
@@ -66,7 +66,7 @@ export class ItemsService {
    * 다시 만난 표현의 상태는 '헷갈려요'로 되돌린다 — 외웠다고 표시해 둔 것을
    * 또 담았다면, 외웠다는 말이 더는 사실이 아니기 때문이다.
    */
-  async save(readerId: string, dto: SaveItemDto): Promise<SaveResult> {
+  async save(readerId: string, dto: SaveItemInput): Promise<SaveResult> {
     const owner = new Types.ObjectId(readerId);
     const sentence = await this.sentences.findOne({
       _id: dto.sentenceId,
@@ -82,6 +82,7 @@ export class ItemsService {
         readerId: owner,
         term,
         meaning: dto.meaning,
+        usages: dto.usages ?? [],
         encounters: [
           {
             sentenceId: sentence._id,
@@ -97,6 +98,7 @@ export class ItemsService {
       encounter.sentenceId.equals(sentence._id),
     );
     if (met) {
+      let dirty = false;
       /**
        * 같은 문장에서 이미 만난 표현이다 — 재회는 아니다. 다만 독자가 고른 글자가 달라졌으면
        * (글자 인식이 'pa'로 쪼갠 것을 'patronizing'으로 고쳐 다시 물었다) 만남에 적힌 글자를
@@ -104,8 +106,22 @@ export class ItemsService {
        */
       if (dto.surface && met.surface !== dto.surface) {
         met.surface = dto.surface;
-        await existing.save();
+        dirty = true;
       }
+      /**
+       * 쓰임은 뜻(`meaning`)을 지은 문장 — 첫 만남 — 에서 받은 것만 쓴다(ADR-0005). 처음
+       * 문장을 다시 물었는데 쓰임이 비어 있으면(그때 모델이 빠뜨렸다) 채운다. 다른 문장에서
+       * 다시 만났을 때는 채우지 않는다 — make out처럼 뜻이 다를 수 있다.
+       */
+      if (
+        met === existing.encounters[0] &&
+        !existing.usages?.length &&
+        dto.usages?.length
+      ) {
+        existing.usages = dto.usages;
+        dirty = true;
+      }
+      if (dirty) await existing.save();
       return { item: existing, reencountered: false };
     }
 

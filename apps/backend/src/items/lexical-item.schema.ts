@@ -28,6 +28,28 @@ export class Encounter {
 
 export const EncounterSchema = SchemaFactory.createForClass(Encounter);
 
+/**
+ * 쓰임 — 모델이 이 표현으로 지은 짧은 문장. 책에서 처음 만난 그 뜻(`meaning`) 그대로,
+ * 다른 상황이나 말투로 쓴다(ADR-0005). 책에서 온 문장이 아니라서 서랍에 서지 않고
+ * 재회도 만들지 않는다.
+ */
+@Schema({ _id: false })
+export class Usage {
+  /** 책과 같은 언어로 지은 문장 */
+  @Prop({ required: true })
+  text!: string;
+
+  /** `text` 안에서 이 표현이 쓰인 꼴 — 밑줄을 긋는다. `text`에 없으면 비운다. */
+  @Prop()
+  surface?: string;
+
+  /** 한국어 뜻 — 앱은 눌러야 연다 */
+  @Prop({ required: true })
+  translation!: string;
+}
+
+export const UsageSchema = SchemaFactory.createForClass(Usage);
+
 /** 예전에 담아둔, 헷갈리기 쉬운 다른 항목 */
 @Schema({ _id: false })
 export class ConfusedWith {
@@ -69,6 +91,14 @@ export class LexicalItem {
 
   @Prop({ type: ConfusedWithSchema })
   confusedWith?: ConfusedWith;
+
+  /**
+   * 같은 뜻의 다른 문장 둘. 처음 담을 때(또는 같은 문장을 다시 물었을 때) 받는다 —
+   * 다른 문장에서 다시 만날 때 받으면 그 문장의 뜻으로 지은 쓰임이 처음 뜻 아래 선다.
+   * 이 필드가 생기기 전에 담은 표현은 비어 있고, 앱은 그 자리를 그리지 않는다.
+   */
+  @Prop({ type: [UsageSchema], default: [] })
+  usages!: Usage[];
 }
 
 export type LexicalItemDocument = HydratedDocument<LexicalItem>;

@@ -145,8 +145,11 @@ export class AnthropicModel implements AskModel {
     try {
       const response = await this.client.messages.parse({
         model: this.modelName,
-        /** 다섯 문장에 표현 여덟 개씩이어도 3천 토큰 안쪽이다. 크게 잡을수록 오래 걸린다. */
-        max_tokens: 6000,
+        /**
+         * 쓰임(표현마다 두 문장, ADR-0005)이 붙어 다섯 문장에 표현 여덟 개씩이면 8천 토큰 안팎이다.
+         * 잘리면 답 전체가 형식 오류로 떨어지니 넉넉히 잡는다 — 한도는 상한일 뿐 실제로 쓴 만큼만 든다.
+         */
+        max_tokens: 12000,
         /** 붙박이 부분만 캐시에 올린다 */
         system: [
           { type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } },

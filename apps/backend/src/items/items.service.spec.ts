@@ -322,3 +322,122 @@ describe('ItemsService.save — 같은 문장에서 다시 담을 때', () => {
     expect(existing.save).not.toHaveBeenCalled();
   });
 });
+
+describe('ItemsService.save — 쓰임 (ADR-0005)', () => {
+  const usages = [
+    {
+      text: 'Hold the ladder for me.',
+      surface: 'ladder',
+      translation: '사다리 좀 잡아 줘.',
+    },
+    {
+      text: 'A ladder leaned on the wall.',
+      surface: 'ladder',
+      translation: '사다리가 벽에 기대 있었다.',
+    },
+  ];
+
+  function setup(existing: Record<string, unknown> | null) {
+    const target = id();
+    const items = {
+      findOne: jest.fn().mockResolvedValue(existing),
+      create: jest.fn((doc: unknown) => Promise.resolve(doc)),
+    };
+    const sentences = { findOne: jest.fn().mockResolvedValue({ _id: target }) };
+    const service = new ItemsService(
+      items as never,
+      sentences as never,
+      {} as never,
+      {} as never,
+    );
+    return { service, items, target };
+  }
+
+  it('처음 담을 때 쓰임을 함께 담는다', async () => {
+    const { service, items, target } = setup(null);
+
+    await service.save(reader.toString(), {
+      sentenceId: target.toString(),
+      term: 'ladder',
+      meaning: '사다리',
+      usages,
+    });
+
+    expect(items.create).toHaveBeenCalledWith(
+      expect.objectContaining({ usages }),
+    );
+  });
+
+  it('다른 문장에서 다시 만나면 쓰임을 채우지 않는다 — 뜻이 다를 수 있다', async () => {
+    const existing = {
+      _id: id(),
+      usages: [],
+      encounters: [{ sentenceId: id(), savedAt: new Date() }],
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const { service, target } = setup(existing);
+
+    const result = await service.save(reader.toString(), {
+      sentenceId: target.toString(),
+      term: 'ladder',
+      meaning: '사다리',
+      usages,
+    });
+
+    expect(result.reencountered).toBe(true);
+    expect(existing.usages).toEqual([]);
+  });
+
+  it('첫 문장을 다시 물었는데 쓰임이 비어 있으면 채운다', async () => {
+    const { service, target } = setup(null);
+    const existing = {
+      _id: id(),
+      usages: [] as unknown[],
+      encounters: [
+        { sentenceId: target, surface: 'ladder', savedAt: new Date() },
+      ],
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    (
+      service as unknown as { items: { findOne: jest.Mock } }
+    ).items.findOne.mockResolvedValue(existing);
+
+    await service.save(reader.toString(), {
+      sentenceId: target.toString(),
+      term: 'ladder',
+      meaning: '사다리',
+      surface: 'ladder',
+      usages,
+    });
+
+    expect(existing.usages).toEqual(usages);
+    expect(existing.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('이미 있는 쓰임은 덮어쓰지 않는다', async () => {
+    const { service, target } = setup(null);
+    const kept = [{ text: 'old', translation: '옛' }];
+    const existing = {
+      _id: id(),
+      usages: kept,
+      encounters: [
+        { sentenceId: target, surface: 'ladder', savedAt: new Date() },
+      ],
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    (
+      service as unknown as { items: { findOne: jest.Mock } }
+    ).items.findOne.mockResolvedValue(existing);
+
+    await service.save(reader.toString(), {
+      sentenceId: target.toString(),
+      term: 'ladder',
+      meaning: '사다리',
+      surface: 'ladder',
+      usages,
+    });
+
+    expect(existing.usages).toBe(kept);
+    expect(existing.save).not.toHaveBeenCalled();
+  });
+});

@@ -47,6 +47,14 @@ export class SaveItemDto {
   surface?: string;
 }
 
+/**
+ * 질문의 답에서 담을 때만 쓰는 값. 쓰임은 모델이 짓는 것이라 `POST /items`로는
+ * 받지 않는다 — 그래서 DTO가 아니라 서비스 안의 꼴이다.
+ */
+export type SaveItemInput = SaveItemDto & {
+  usages?: { text: string; surface?: string; translation: string }[];
+};
+
 export class UpdateItemDto {
   @IsOptional()
   @IsString()

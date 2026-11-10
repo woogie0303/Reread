@@ -518,13 +518,14 @@ export class AsksService {
           meaning: pick.meaning,
           sentenceId: sentence.id,
           surface: pick.surface,
+          usages: pick.usages,
         });
-        kept.push({ ...pick, itemId: item._id });
+        kept.push({ ...toAskPick(pick), itemId: item._id });
       } catch (error) {
         this.log.error(
           `고른 표현을 담지 못했어요: ${pick.term} ${String(error)}`,
         );
-        kept.push(pick);
+        kept.push(toAskPick(pick));
       }
     }
     return kept;
@@ -577,4 +578,14 @@ function dayKey(now: Date): string {
 
 function startOfNextMonth(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth() + 1, 1);
+}
+
+/** 쓰임은 질문이 아니라 어휘 항목에 산다(ADR-0005) — 질문의 표현에는 싣지 않는다 */
+function toAskPick(pick: MatchedAnswer['picks'][number]): AskPick {
+  return {
+    surface: pick.surface,
+    term: pick.term,
+    meaning: pick.meaning,
+    translationSpan: pick.translationSpan,
+  };
 }

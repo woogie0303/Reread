@@ -38,6 +38,7 @@ describe('matchAnswer', () => {
         surface: 'brushed it off',
         term: 'brush it off',
         meaning: '별일 아닌 듯 넘기다',
+        usages: [],
       },
     ]);
     expect(result[1]?.picks.map((pick) => pick.term)).toEqual([
@@ -164,5 +165,56 @@ describe('matchAnswer — 이미 번역이 있는 문장', () => {
     expect(result[0]?.picks[0].translationSpan).toBe('별일 아닌 듯 넘겼지만');
     expect(result[1]?.picks[0].translationSpan).toBeUndefined();
     expect(result[1]?.picks[1].translationSpan).toBe('떠났는지');
+  });
+});
+
+describe('matchAnswer — 쓰임', () => {
+  const one = [{ text: 'He climbed the small ladder.', picks: ['ladder'] }];
+  const answer = (usages: unknown) => ({
+    sentences: [
+      {
+        translation: '그는 작은 사다리를 올랐다.',
+        picks: [
+          { surface: 'ladder', term: 'ladder', meaning: '사다리', usages },
+        ],
+      },
+    ],
+  });
+
+  it('쓰임이 빠져도 답은 선다', () => {
+    const [got] = matchAnswer(one, answer(undefined) as never);
+    expect(got?.picks[0].usages).toEqual([]);
+  });
+
+  it('글에 없는 surface는 밑줄만 버리고, 빈 쓰임은 버리고, 둘까지만 남긴다', () => {
+    const [got] = matchAnswer(
+      one,
+      answer([
+        {
+          text: 'Hold the ladder.',
+          surface: 'Ladders',
+          translation: '사다리 잡아.',
+        },
+        { text: '', surface: '', translation: '빈 글' },
+        {
+          text: 'A ladder fell.',
+          surface: 'ladder',
+          translation: '사다리가 넘어졌다.',
+        },
+        { text: 'Third ladder.', surface: 'ladder', translation: '세 번째' },
+      ]) as never,
+    );
+    expect(got?.picks[0].usages).toEqual([
+      {
+        text: 'Hold the ladder.',
+        surface: undefined,
+        translation: '사다리 잡아.',
+      },
+      {
+        text: 'A ladder fell.',
+        surface: 'ladder',
+        translation: '사다리가 넘어졌다.',
+      },
+    ]);
   });
 });

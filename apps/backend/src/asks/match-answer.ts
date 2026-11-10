@@ -11,8 +11,39 @@ export type MatchedAnswer = {
     meaning: string;
     /** 번역에서 이 표현에 해당하는 글자 — 번역에 실제로 있을 때만 */
     translationSpan?: string;
+    /** 같은 뜻의 다른 문장(ADR-0005). 곁들이라 없어도 답은 선다. */
+    usages: Usage[];
   }[];
 };
+
+export type Usage = { text: string; surface?: string; translation: string };
+
+/** 한 표현에 쓰임은 둘까지 — 모델이 더 지어 와도 화면은 둘만 그린다 */
+export const MAX_USAGES = 2;
+
+/**
+ * 모델이 지은 쓰임을 고른다. 글이나 번역이 빈 것은 버리고, `surface`가 글 안에 없으면
+ * 문장은 남기고 밑줄만 버린다 — 줄을 그을 자리를 찾지 못하는 값이 남아 있으면 안 된다.
+ */
+export function tidyUsages(
+  usages: { text: string; surface: string; translation: string }[] | undefined,
+): Usage[] {
+  return (usages ?? [])
+    .flatMap((usage) => {
+      const text = usage.text?.trim();
+      const translation = usage.translation?.trim();
+      if (!text || !translation) return [];
+      const surface = usage.surface?.trim();
+      return [
+        {
+          text,
+          translation,
+          surface: surface && text.includes(surface) ? surface : undefined,
+        },
+      ];
+    })
+    .slice(0, MAX_USAGES);
+}
 
 const log = new Logger('matchAnswer');
 
@@ -57,6 +88,7 @@ export function matchAnswer(
         term: hit.term.trim(),
         meaning: hit.meaning.trim(),
         translationSpan: span && translation.includes(span) ? span : undefined,
+        usages: tidyUsages(hit.usages),
       });
     }
 

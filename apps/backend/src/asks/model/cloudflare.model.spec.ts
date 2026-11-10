@@ -25,6 +25,7 @@ const answer = {
           term: 'brush it off',
           meaning: '대수롭지 않게 넘기다',
           translationSpan: '',
+          usages: [],
         },
       ],
     },
